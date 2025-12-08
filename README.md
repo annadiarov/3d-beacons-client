@@ -5,7 +5,7 @@ This is an implementation of 3D-Beacons client which provides various tools and 
 More about 3D-Beacons can be found in the [WikiPages](https://github.com/3D-Beacons/3D-Beacons/wiki)
 
 ## Publication
-**3D-Beacons: Decreasing the gap between protein sequences and structures through a federated network of protein structure data resources**<br> 
+**3D-Beacons: Decreasing the gap between protein sequences and structures through a federated network of protein structure data resources**<br>
 [Mihaly Varadi](https://github.com/mvaradi), [Sreenath Nair](https://github.com/sreenathnair), [Ian Sillitoe](https://github.com/orgs/3D-Beacons/people/sillitoe), [Gerardo Tauriello](https://github.com/orgs/3D-Beacons/people/gtauriello), Stephen Anyango, [Stefan Bienert](https://github.com/orgs/3D-Beacons/people/bienchen), Clemente Borges, Mandar Deshpande, Tim Green, Demis Hassabis, Andras Hatos, Tamas Hegedus, Maarten L Hekkelman, Robbie Joosten, John Jumper, Agata Laydon, Dmitry Molodenskiy, Damiano Piovesan, Edoardo Salladini, Steven L. Salzberg, Markus J Sommer, Martin Steinegger, Erzsebet Suhajda, Dmitri Svergun, Luiggi Tenorio-Ku, Silvio Tosatto, Kathryn Tunyasuvunakool, [Andrew Mark Waterhouse](https://github.com/orgs/3D-Beacons/people/awaterho), Augustin Žídek, Torsten Schwede, Christine Orengo, Sameer Velankar<br>
 3 August 2022; BioRxiv https://doi.org/10.1101/2022.08.01.501973
 
@@ -228,26 +228,17 @@ cat ./data/metadata/P38398_1jm7.1.A_1_103.json   # you need to generate this fil
 Running CLI commands outside of docker
 
 - Pros: one fewer layers to consider
-- Cons: requires more manual installation
+- Cons: requires manual installation
 
 ```
-# create a virtual environment
-python3 -m venv venv
+# Install UV (if not already installed)
+pip install uv
 
-# use the virtual environment
-. venv/bin/activate
-
-# make the all the installation libraries are up to date
-pip install --upgrade pip setuptools wheel
-
-# install the dependencies for this project
-pip install -r bio3dbeacons/cli/requirements.txt
-
-# install the CLI script
-pip install -e .
+# Sync dependencies and create virtual environment
+uv sync
 
 # run the CLI tool
-3dbeacons-cli
+uv run 3dbeacons-cli
 Usage: 3dbeacons-cli [OPTIONS] COMMAND [ARGS]...
 
   CLI application for 3D Beacons utilities
@@ -266,6 +257,13 @@ You will also need to install [GEMMI software](https://gemmi.readthedocs.io/en/l
 The instuctions will vary depending on your operating system, but it will look something like:
 
 ```
+# On macOS
+brew install gemmi
+
+# On Ubuntu/Debian
+apt-get update && apt-get install -y gemmi
+
+# Or build from source
 apt-get update && apt-get install -y git cmake make g++
 git clone https://github.com/project-gemmi/gemmi.git && cd gemmi && cmake . && make
 export GEMMI_BIN=$PWD/gemmi
@@ -382,33 +380,21 @@ mongosh mongodb://<MONGO_USERNAME>:<MONGO_PASSWORD>@localhost:27017
 The docker compose command will start an API service inside the docker container. This may not be a good option to continously test and develop your services. To develop the API locally, use the below commands.
 
 ```
-# Create a new Python (3.6+) virtual environment
-python3 -m venv venv
+# Install UV (if not already installed)
+pip install uv
 
-# activate the environment
-source venv/bin/activate
-
-# Install the dependencies
-pip install -r bio3dbeacons/api/requirements.txt
+# Sync dependencies
+uv sync
 ```
 
-The above commands will create a new Python virtual environment and install the dependencies required to run the API.
-
-Alternatively, environment can be managed very easily using [Anaconda](https://docs.anaconda.com/) as well. Use below commands to manage via conda.
-
-```
-conda create -n beacons_env -c conda-forge python=3.7 gemmi
-conda activate beacons_env
-```
-
-The above commands will create a new conda environment `beacons_env` with Python version 3.7 along with the Gemmi program which is later used by CLI.
+The above commands will create a Python virtual environment and install the dependencies required to run the API using UV.
 
 To use environment variables, API is using a python package `python-dotenv` which is a convenient way of keeping the variables in a `.env` file in the project directory.
 
-Now that dependencies and environment variables are available, run the API locally using [uvicorn](https://www.uvicorn.org/) which is a lightning fast ASGI server implementation. This is already installed using the `pip` command executed before.
+Now that dependencies and environment variables are available, run the API locally using [uvicorn](https://www.uvicorn.org/) which is a lightning fast ASGI server implementation.
 
 ```
-uvicorn bio3dbeacons.api.main:app --reload
+uv run uvicorn bio3dbeacons.api.main:app --reload
 ```
 
 Now access the local API docs using [http://localhost:8000/docs](http://localhost:8000/docs). The server will keep monitoring the files and reloads the instance without the need for restarting the server after making any code changes.
@@ -417,41 +403,31 @@ Now access the local API docs using [http://localhost:8000/docs](http://localhos
 
 ##### Develop CLI locally
 
-CLI is conveniently packed using Python [click](https://palletsprojects.com/p/click/) package which is an easy way of creating command line interfaces with less code. `<PROJECT_ROOT>/bio3dbeacons/cli/.py` is the entry point for the CLI application.
+CLI is conveniently packed using Python [click](https://palletsprojects.com/p/click/) package which is an easy way of creating command line interfaces with less code. `<PROJECT_ROOT>/bio3dbeacons/cli/cli.py` is the entry point for the CLI application.
 
-Follow below steps to start using the CLI,
+Follow below steps to start using the CLI.
 
-CLI has an external dependency on [Gemmi program](https://gemmi.readthedocs.io/en/latest/install.html#gemmi-program) for converting PDB files to CIF. It is available as part of [conda-forge packages](https://anaconda.org/conda-forge/gemmi/files) or can be build from source by following below steps.
-
-**NOTE**: Skip these steps if using conda to manage the environment as described in earlier section.
-
-Make sure you have git, cmake, C++ compiler installed
-For eg. on Ubuntu, `sudo apt install git cmake make g++`
+CLI has an external dependency on [Gemmi program](https://gemmi.readthedocs.io/en/latest/install.html#gemmi-program) for converting PDB files to CIF. Install it using your system package manager:
 
 ```
-git clone https://github.com/project-gemmi/gemmi.git
-cd gemmi
-cmake .
-make
-export GEMMI_BIN=$PWD/gemmi/gemmi
+# On macOS
+brew install gemmi
+
+# On Ubuntu/Debian
+sudo apt-get install gemmi
 ```
 
-```
-# Create a new Python (3.6+) virtual environment
-python3 -m venv venv
-```
-
-If the environment is already created as part of API development, skip the previous step.
+Then set up the development environment:
 
 ```
-# activate the environment
-source venv/bin/activate
+# Install UV (if not already installed)
+pip install uv
 
-# Install the dependencies
-pip install -r bio3dbeacons/cli/requirements.txt
+# Sync dependencies
+uv sync
 
 # Get the help menu of the CLI
-python3 -m bio3dbeacons.cli --help
+uv run 3dbeacons-cli --help
 ```
 
 Use the help menu of various commands to see their usage.
@@ -459,31 +435,22 @@ Use the help menu of various commands to see their usage.
 For eg:
 
 ```
-(venv) $ python3 -m bio3dbeacons.cli convert_pdb_to_cif --help
-Usage: python -m bio3dbeacons.cli convert_pdb_to_cif [OPTIONS]
+$ uv run 3dbeacons-cli convert-pdb2cif --help
+Usage: 3dbeacons-cli convert-pdb2cif [OPTIONS]
 
 Options:
--i, --input-pdb TEXT Input PDB to convert, can be a directory in which
-case all .pdb files will be converted [required]
--o, --output-cif TEXT Output CIF file, a directory in case a directory is
-passed for --input-pdb [required]
---help Show this message and exit.
+  -i, --input-pdb TEXT   Input PDB to convert, can be a directory in which
+                         case all .pdb files will be converted [required]
+  -o, --output-cif TEXT  Output CIF file, a directory in case a directory is
+                         passed for --input-pdb [required]
+  --help                 Show this message and exit.
 ```
 
-The CLI can also be distributed as a Python pip package, install and use it using below commands.
+The CLI can also be run directly using UV:
 
 ```
-# activate the environment
-source venv/bin/activate
-
-# Update pip, wheel and setuptools
-pip install --upgrade pip setuptools wheel
-
-# Install the dependencies
-pip install .
-
 # Get the help menu of the CLI
-bio3dbeacons_cli --help
+uv run 3dbeacons-cli --help
 ```
 
 To further make it more convenient for development and distribution, there is a docker image provided as well. Use below steps to build and run the CLI application.
@@ -493,10 +460,10 @@ To further make it more convenient for development and distribution, there is a 
 docker build -t bio3dbeacons .
 
 # Get the help menu of the CLI
-docker run -t bio3dbeacons bio3dbeacons_cli --help
+docker run -t bio3dbeacons uv run 3dbeacons-cli --help
 
 # Run PDB to CIF conversion using the docker image
-docker run -v $PWD/data:/data -t bio3dbeacons bio3dbeacons_cli convert_pdb_to_cif -i /data/pdb -o /data/cif
+docker run -v $PWD/data:/data -t bio3dbeacons uv run 3dbeacons-cli convert-pdb2cif -i /data/pdb -o /data/cif
 ```
 
 The above docker run command for PDB to CIF conversion assumes you have a `data/pdb` directory in current working directory with one or more PDB files. The command will convert the PDB files in `data/pdb` to `data/cif` directory.
@@ -515,15 +482,15 @@ Please make sure to keep the docker compose services up as the tests will be run
 
 ```
 # set the env variables from 'Develop API locally' section
-make test
+make test  # Uses uv to run tests
 ```
 
 ### Workflow automation using pre-commit hooks
 
-Code formatting and PEP8 compliance are automated using [pre-commit](https://pre-commit.com/) hooks. This is configured in `.pre-commit-config.yaml` which will run these hooks before `commit` ting anything to the repository. Run below command to run all the pre-commit hooks.
+Code formatting and PEP8 compliance are automated using [pre-commit](https://pre-commit.com/) hooks with [Ruff](https://github.com/astral-sh/ruff) for linting and formatting. This is configured in `.pre-commit-config.yaml` which will run these hooks before `commit` ting anything to the repository. Run below command to run all the pre-commit hooks.
 
 ```
-make pre-commit
+make pre-commit  # Uses UV to run pre-commit hooks
 ```
 
 ## Troubleshooting

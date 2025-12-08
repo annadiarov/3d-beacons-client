@@ -4,7 +4,9 @@ services:
     build:
       context: .
       dockerfile: docker/web/Dockerfile
-    command: uvicorn bio3dbeacons.api.main:app --host 0.0.0.0
+    env_file:
+      - .env
+    command: uv run uvicorn bio3dbeacons.api.main:app --host 0.0.0.0
     ports:
       - 8000:8000
     restart: always
@@ -28,12 +30,16 @@ services:
     build:
       context: .
       dockerfile: docker/cli/Dockerfile
+    env_file:
+      - .env
     volumes:
       - ./data:/app/data
     entrypoint: "tail -F anything"
 
   mongodb:
     image: mongo:latest
+    env_file:
+      - .env
     environment:
       - MONGO_INITDB_ROOT_USERNAME=${MONGO_USERNAME:?}
       - MONGO_INITDB_ROOT_PASSWORD=${MONGO_PASSWORD:?}

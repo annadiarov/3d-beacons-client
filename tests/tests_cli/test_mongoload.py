@@ -36,7 +36,6 @@ class TestMongoLoad:
         assert cursor.collection.estimated_document_count() == 1
 
     def test_directory_single_doc(self, mongo_collection, mongo_load):
-
         with patch(
             "bio3dbeacons.cli.mongoload.mongoload.MongoLoad.init_collection",
             return_value=mongo_collection,
@@ -63,7 +62,6 @@ class TestMongoLoad:
         assert cursor.collection.estimated_document_count() == 1
 
     def test_directory_multiple_docs(self, mongo_collection, mongo_load):
-
         with patch(
             "bio3dbeacons.cli.mongoload.mongoload.MongoLoad.init_collection",
             return_value=mongo_collection,

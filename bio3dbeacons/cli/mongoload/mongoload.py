@@ -12,7 +12,6 @@ LOG = logging.getLogger(__name__)
 
 
 class MongoLoad:
-
     data: List[Dict]
     collection: Collection
 
@@ -23,8 +22,7 @@ class MongoLoad:
         )
 
     def init_collection(self, mongo_db_url):
-        self.collection = pymongo.MongoClient(
-            mongo_db_url).models.modelCollection
+        self.collection = pymongo.MongoClient(mongo_db_url).models.modelCollection
 
     def load(self):
         self.collection.bulk_write(self.data)
@@ -77,8 +75,7 @@ def run(index_path: str, mongo_db_url: str, batch_size: int):
 
         LOG.info(f"Loading {index_path}")
         d = json.load(open(index_path, "r"))
-        lm.data.append(
-            UpdateOne({"_id": d.get("_id")}, {"$set": d}, upsert=True))
+        lm.data.append(UpdateOne({"_id": d.get("_id")}, {"$set": d}, upsert=True))
         lm.load()
         LOG.info(f"Loaded {index_path}")
 

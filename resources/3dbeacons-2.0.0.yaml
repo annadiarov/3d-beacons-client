@@ -267,9 +267,9 @@ components:
     detailed:
       type: object
       properties:
-        summary: 
+        summary:
           $ref: '#/components/schemas/summary_items'
-        chains: 
+        chains:
           $ref: '#/components/schemas/chains'
       required:
         - summary
@@ -277,7 +277,7 @@ components:
     overview:
       type: object
       properties:
-        summary: 
+        summary:
           $ref: '#/components/schemas/summary_items'
       required:
         - summary
@@ -406,14 +406,14 @@ components:
         confidence_version:
           type: string
           description: >
-            Version of confidence measure software used to calculate quality. 
+            Version of confidence measure software used to calculate quality.
             This is required for theoretical models.
           example: v1.0.2
         confidence_avg_local_score:
           type: number
           description: >
-            Average of the confidence measures in the range of [0,1] for QMEANDisCo 
-            and [0,100] for pLDDT. Please contact 3D-Beacons developers if other 
+            Average of the confidence measures in the range of [0,1] for QMEANDisCo
+            and [0,100] for pLDDT. Please contact 3D-Beacons developers if other
             estimates are to be added. This is required for theoretical models.
           example: 0.95
         oligomeric_state:
@@ -533,7 +533,7 @@ components:
                       template_sequence_identity:
                         type: number
                         description: >
-                          Sequence identity of the template with the 
+                          Sequence identity of the template with the
                           UniProt accession, in the range of [0,1]
                         example: 0.97
                       last_updated:

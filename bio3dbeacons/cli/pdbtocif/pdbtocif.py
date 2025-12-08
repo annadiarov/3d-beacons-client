@@ -19,8 +19,15 @@ class Pdb2Cif:
 
     def convert(self) -> int:
         """Converts PDB to CIF"""
-        LOG.info(
-            f"Converting PDB:{self.pdb_path} to CIF:{self.output_cif_path}")
+        LOG.info(f"Converting PDB:{self.pdb_path} to CIF:{self.output_cif_path}")
+
+        # Default to the Python gemmi implementation for deterministic output.
+        # Allow opting into the binary converter with GEMMI_USE_BIN=1.
+        use_bin = os.environ.get("GEMMI_USE_BIN") == "1"
+
+        if not use_bin:
+            return self._convert_with_library()
+
         try:
             cmd_args = [
                 GEMMI_BIN,
@@ -32,14 +39,32 @@ class Pdb2Cif:
             ]
             subprocess.check_call(cmd_args)
             LOG.info(f"Converted {self.pdb_path} to {self.output_cif_path}")
-
+            return 0
+        except FileNotFoundError:
+            LOG.warning("gemmi binary not found; falling back to python gemmi")
+            return self._convert_with_library()
         except Exception as e:
-            LOG.error(
-                f"Error converting the PDB file: {self.pdb_path} (err:{e})")
+            LOG.error(f"Error converting the PDB file: {self.pdb_path} (err:{e})")
             LOG.debug(e)
             return 1
 
-        return 0
+    def _convert_with_library(self) -> int:
+        """Fallback converter using the gemmi Python library."""
+        try:
+            import gemmi
+
+            structure = gemmi.read_structure(self.pdb_path)
+            doc = structure.make_mmcif_document()
+            with open(self.output_cif_path, "w", encoding="utf-8") as cif_file:
+                cif_file.write(doc.as_string())
+            LOG.info(
+                f"Converted (python gemmi) {self.pdb_path} to {self.output_cif_path}"
+            )
+            return 0
+        except Exception as e:  # pragma: no cover - surfaced in calling code
+            LOG.error(f"Error converting the PDB file: {self.pdb_path} (err:{e})")
+            LOG.debug(e)
+            return 1
 
 
 def process(pdb_path: str, output_cif_path: str):
@@ -60,8 +85,7 @@ def run(pdb_path: str, output_cif_path: str) -> int:
     # if a directory is provided, convert all .pdb files in it
     if os.path.isdir(pdb_path):
         if os.path.isfile(output_cif_path):
-            LOG.error(
-                f"{output_cif_path} is a file, must provide a directory")
+            LOG.error(f"{output_cif_path} is a file, must provide a directory")
             return 1
 
         # make the output dir

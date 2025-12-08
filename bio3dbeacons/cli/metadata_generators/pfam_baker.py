@@ -16,7 +16,12 @@ LOG = logging.getLogger(__name__)
 UNIPROT_SPARQL = UniprotSparql()
 
 
-def run(pdb_path: str, a3m_path: str, metadata_path: str, model_category: str):
+def run(
+    pdb_path: str | Path,
+    a3m_path: str | Path,
+    metadata_path: str | Path,
+    model_category: str,
+) -> int:
     """
     Create metadata json documents for PFAM/Baker models
 
@@ -29,11 +34,11 @@ def run(pdb_path: str, a3m_path: str, metadata_path: str, model_category: str):
             directory is passed, output to .json
     """
 
-    pdb_path = Path(str(pdb_path)).resolve()
-    a3m_path = Path(str(a3m_path)).resolve()
-    metadata_path = Path(str(metadata_path)).resolve()
+    pdb_path = Path(pdb_path).resolve()
+    a3m_path = Path(a3m_path).resolve()
+    metadata_path = Path(metadata_path).resolve()
 
-    def process_pdb_file(pdb_file, rel_path):
+    def process_pdb_file(pdb_file: Path, rel_path: Path):
         stem = pdb_file.stem
         full_pdb_file = pdb_path / rel_path / pdb_file
         a3m_file = a3m_path / rel_path / (stem + ".a3m")
@@ -48,7 +53,7 @@ def run(pdb_path: str, a3m_path: str, metadata_path: str, model_category: str):
             modelCategory=model_category,
             modelType="single",
             confidenceType="pLDDT",
-            confidenceAvgLocalScore=get_avg_plddt_from_pdb(full_pdb_file),
+            confidenceAvgLocalScore=f"{get_avg_plddt_from_pdb(full_pdb_file):.2f}",
         )
         write_metadata_to_file(metadata_file, md)
 
@@ -62,7 +67,7 @@ def run(pdb_path: str, a3m_path: str, metadata_path: str, model_category: str):
                 process_pdb_file(Path(pdb_file), rel_path)
 
     elif pdb_path.is_file() and a3m_path.is_file() and metadata_path.is_file():
-        process_pdb_file(pdb_path, ".")
+        process_pdb_file(pdb_path, Path("."))
     else:
         msg = (
             f"expected either all dirs or all files (not a mixture): "
@@ -74,7 +79,6 @@ def run(pdb_path: str, a3m_path: str, metadata_path: str, model_category: str):
 
 
 class SeqHeader:
-
     WITH_SEGDATA = re.compile(r"^(?P<seq_id>.*)/(?P<start>[0-9]+)-(?P<end>[0-9]+)$")
     WITH_VERSION = re.compile(r"^(?P<seq_id>.*)\.(?P<version>[0-9]+)$")
     UNIPROT_ACC = re.compile(
@@ -111,7 +115,6 @@ class SeqHeader:
         self.end = int(end)
 
     def get_uniprot_start_end(self) -> Tuple[str, int, int]:
-
         uniprot_acc = self.uniprot_acc
         if not uniprot_acc:
             gene_name = self.seq_id
@@ -126,9 +129,12 @@ def get_first_seqhdr_from_a3m(a3m_path: Path) -> SeqHeader:
             if line.startswith(">"):
                 return SeqHeader(line[1:].strip())
 
+    raise ValueError(f"No sequence header found in {a3m_path}")
+
 
 def write_metadata_to_file(metadata_path: Path, md: ModelMetadata) -> None:
     with metadata_path.open("wt") as fp:
         data = md.dict()
         LOG.info("data: %s", data)
         json.dump(data, fp)
+        fp.write("\n")

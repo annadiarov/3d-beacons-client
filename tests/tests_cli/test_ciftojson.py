@@ -7,19 +7,34 @@ from bio3dbeacons.cli.ciftojson import ciftojson
 EXPECTED_OBJ = {
     "entryId": "P38398_1jm7.1.A_1_103",
     "experimentalMethod": "THEORETICAL MODEL (SWISS-MODEL SERVER)",
+    "entities": [
+        {
+            "entityType": "polymer",
+            "entityDescription": "",
+            "chainIds": ["Apoly"],
+        },
+        {
+            "entityType": "non-polymer",
+            "entityDescription": "",
+            "chainIds": [],
+        },
+    ],
     "mappingAccession": "P38398",
     "mappingAccessionType": "uniprot",
     "start": 1,
     "end": 103,
     "modelCategory": "TEMPLATE-BASED",
     "modelType": "single",
+    "confidenceType": "pLDDT",
+    "confidenceAvgLocalScore": 98.76,
+    "createdDate": "2023-02-23",
+    "sequenceIdentity": 1,
+    "coverage": 0.115,
     "mappingId": "BRCA1_HUMAN",
     "mappingDescription": "Breast cancer type 1 susceptibility protein",
     "gene": "BRCA1",
     "organismScientificName": "Homo sapiens",
     "taxId": 9606,
-    "confidenceType": "pLDDT",
-    "confidenceAvgLocalScore": 98.76,
     "_id": "P38398_1jm7.1.A_1_103",
 }
 
@@ -47,7 +62,6 @@ class TestCifToJson:
             ciftojson.run(cif_dir.as_posix(), metadata_dir.as_posix(), temp_out_dir)
 
             for _, _, files in os.walk(temp_out_dir):
-
                 # test if a single json is created
                 assert len(files) == 1
 

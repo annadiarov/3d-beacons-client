@@ -7,7 +7,6 @@ from bio3dbeacons.cli import utils
 
 class TestUtils:
     def test_prepare_data_dictionary_from_json(self):
-
         tmp_file = tempfile.NamedTemporaryFile("w+")
         d = {"test": "some content"}
         json.dump(d, open(tmp_file.name, "w+"))

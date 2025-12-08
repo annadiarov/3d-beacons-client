@@ -1,5 +1,5 @@
 import os
-from typing import Any, Dict, List
+from typing import Any, List
 
 from fastapi import FastAPI, HTTPException
 from fastapi.params import Path, Query
@@ -8,7 +8,13 @@ from starlette.responses import HTMLResponse, JSONResponse
 
 from bio3dbeacons.api import SingletonMongoDB
 from bio3dbeacons.api.constants import UNIPROT_QUAL_DESC, UNIPROT_RANGE_DESC
-from bio3dbeacons.api.models.uniprot_model import UniprotSummary, UniprotEntry, SummaryItems, Entity, Overview
+from bio3dbeacons.api.models.uniprot_model import (
+    UniprotSummary,
+    UniprotEntry,
+    SummaryItems,
+    Entity,
+    Overview,
+)
 from bio3dbeacons.api.utils import get_model_asset_url
 
 app = FastAPI(version="2.0.0")
@@ -74,7 +80,7 @@ async def get_uniprot_summary_api(
         }
     )
 
-    overview_items: List[Overview]  = []
+    overview_items: List[Overview] = []
     uniprot_entry = None
 
     async for row in results:
@@ -100,9 +106,12 @@ async def get_uniprot_summary_api(
                     entities=[
                         Entity(
                             entity_type=x["entityType"].upper(),
-                            description="" if not x["entityDescription"] else x["entityDescription"],
+                            description=""
+                            if not x["entityDescription"]
+                            else x["entityDescription"],
                             chain_ids=x["chainIds"],
-                        ) for x in row["entities"]
+                        )
+                        for x in row["entities"]
                     ],
                 )
             )
@@ -110,7 +119,7 @@ async def get_uniprot_summary_api(
 
     if not overview_items:
         return JSONResponse(content={}, status_code=status.HTTP_404_NOT_FOUND)
-    
+
     return UniprotSummary(
         uniprot_entry=uniprot_entry,
         structures=overview_items,

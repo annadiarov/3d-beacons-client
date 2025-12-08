@@ -10,7 +10,6 @@ from fastapi.encoders import jsonable_encoder
 from bio3dbeacons.cli.models import ModelEntry
 from bio3dbeacons.cli.utils import (
     get_uniprot_xml,
-    prepare_data_dictionary,
     prepare_data_dictionary_from_json,
     prepare_data_dictionary_from_cif,
 )
@@ -46,7 +45,7 @@ class Cif2Json:
             self.interim_entry.update(entry)
 
         except Exception as e:
-            LOG.error("Error in parsing the cif file!", e)
+            LOG.error("Error in parsing the cif file! %s", e)
             LOG.debug(e)
 
     def read_json(self):
@@ -65,8 +64,7 @@ class Cif2Json:
         # parse UniProt xml
         xml_root = get_uniprot_xml(self.interim_entry["mappingAccession"])
 
-        LOG.info(
-            f"Parsing XML for {self.interim_entry['mappingAccession']}")
+        LOG.info(f"Parsing XML for {self.interim_entry['mappingAccession']}")
         if xml_root:
             namespace = "{http://uniprot.org/uniprot}"
             # fetch accession related data
@@ -76,7 +74,7 @@ class Cif2Json:
                     f"./{namespace}entry/{namespace}protein/{namespace}recommendedName"
                     f"/{namespace}fullName"
                 ).text
-            except:
+            except AttributeError:
                 description = xml_root.find(
                     f"./{namespace}entry/{namespace}protein/{namespace}submittedName"
                     f"/{namespace}fullName"
@@ -106,8 +104,7 @@ class Cif2Json:
     def transform(self):
         """Performs transformation on the fields"""
 
-        self.interim_entry["entryId"] = self.interim_entry["entryId"].strip(
-            "'")    
+        self.interim_entry["entryId"] = self.interim_entry["entryId"].strip("'")
         if self.interim_entry["experimentalMethod"]:
             self.interim_entry["experimentalMethod"] = self.interim_entry[
                 "experimentalMethod"
@@ -124,23 +121,19 @@ class Cif2Json:
         except Exception as e:
             LOG.error("Error in writing to output JSON file! (err:%s)", e)
             LOG.debug(e)
-            return 1
-
-        LOG.info(f"Data written to {self.output_index_json_path}")
-
-        return 0
 
 
 def process(cif_path: str, metadata_json_path: str, output_index_json_path: str):
+    """Worker to convert a single CIF file to JSON."""
     cif2json = Cif2Json(
         cif_path=cif_path,
         metadata_json_path=metadata_json_path,
         output_index_json_path=output_index_json_path,
     )
+
     cif2json.read_cif()
     cif2json.read_json()
 
-    # add extra uniprot info for uniprot accessions
     if cif2json.interim_entry.get("mappingAccessionType") == "uniprot":
         cif2json.add_extra_uniprot_info()
 
@@ -162,13 +155,10 @@ def run(cif_path: str, metadata_json_path: str, output_index_json_path: str):
     # if a directory is provided, convert all .cif files in it
     if os.path.isdir(cif_path):
         if os.path.isfile(output_index_json_path):
-            LOG.error(
-                f"{output_index_json_path} is a file, must provide a directory"
-            )
+            LOG.error(f"{output_index_json_path} is a file, must provide a directory")
             return 1
         if os.path.isfile(metadata_json_path):
-            LOG.error(
-                f"{metadata_json_path} is a file, must provide a directory")
+            LOG.error(f"{metadata_json_path} is a file, must provide a directory")
             return 1
         # make the output dir
         os.makedirs(output_index_json_path, exist_ok=True)

@@ -10,17 +10,14 @@ from jsonschema.exceptions import ValidationError
 
 LOG = logging.getLogger(__name__)
 
-RESOURCES_PATH = (
-    Path(__file__).parent.parent.parent.parent / "resources").as_posix()
+RESOURCES_PATH = (Path(__file__).parent.parent.parent.parent / "resources").as_posix()
 
 
 class ValidateJSON:
-
     schema = json.load(open(f"{RESOURCES_PATH}/schema.json"))
 
     @classmethod
     def validate(cls, index_json) -> bool:
-
         if not os.path.exists(index_json):
             LOG.error(f"{index_json} not found!")
             return False

@@ -1,5 +1,4 @@
 from _pytest.fixtures import fixture
-import pytest
 from bio3dbeacons.cli.sparql import UniprotSparql
 
 
