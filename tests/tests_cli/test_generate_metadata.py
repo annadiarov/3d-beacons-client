@@ -13,7 +13,6 @@ DATA_ROOT = Path(__file__).parent.parent / "data" / "pfam_baker"
 
 @pytest.fixture
 def example():
-
     tmpdir = tempfile.TemporaryDirectory()
 
     tmproot = Path(tmpdir.name)
@@ -63,7 +62,6 @@ def test_get_first_seqhdr_from_a3m(example):
 
 
 def test_split_baker_pfam_header(example):
-
     Hdr = pfam_baker.SeqHeader
     seqid, start, end = Hdr("W5MWU3_LEPOC/50-163").get_uniprot_start_end()
     assert [seqid, start, end] == ["W5MWU3", 50, 163]

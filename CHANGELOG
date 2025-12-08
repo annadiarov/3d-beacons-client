@@ -1,3 +1,13 @@
+v2.1.0 * 2025*12*08
+
+### Major Changes
+* Migrated project packaging to uv + hatchling
+* Raised supported runtime to Python 3.12
+
+### Minor Changes
+* Updated docs and tooling references for uv workflow
+
+
 v2.0.0 * 2023*03*01
 
 ### Major Changes
@@ -11,4 +21,3 @@ v2.0.0 * 2023*03*01
 ### Minor Changes
 * Updated README
 * Removed isort version pinning in setup.cfg
-

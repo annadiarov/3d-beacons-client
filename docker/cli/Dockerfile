@@ -4,7 +4,7 @@
 # docker build -f docker/cli/Dockerfile .
 
 # pull the official docker image
-FROM python:3.7-slim
+FROM python:3.12-slim
 
 # set work directory
 WORKDIR /app
@@ -13,23 +13,18 @@ WORKDIR /app
 ENV PYTHONDONTWRITEBYTECODE 1
 ENV PYTHONUNBUFFERED 1
 
-# install external dependencies (GEMMI)
-# (do this early because it takes a long time and can be cached)
-RUN apt-get update && apt-get install -y git cmake make g++
-RUN git clone https://github.com/project-gemmi/gemmi.git && cd gemmi && cmake . && make
-ENV GEMMI_BIN=/app/gemmi/gemmi
+# install external dependencies (GEMMI and snakemake dependencies)
+RUN apt-get update && apt-get install -y gemmi git && rm -rf /var/lib/apt/lists/*
 
-# copy python install files
-COPY setup.cfg setup.py __version__.py bio3dbeacons/cli/requirements.txt ./
+# Install UV
+COPY --from=ghcr.io/astral-sh/uv:latest /uv /usr/local/bin/uv
 
-# install python dependencies
-RUN pip install --upgrade pip setuptools wheel
-RUN pip install -r requirements.txt
-RUN pip install -e .
-
-
-# copy code
+# Copy project files for building
+COPY pyproject.toml uv.lock LICENSE README.md ./
 COPY bio3dbeacons bio3dbeacons
+
+# Install python dependencies with CLI extras
+RUN uv sync --frozen --extra cli
 
 # copy schema
 COPY resources resources
@@ -37,5 +32,8 @@ COPY resources resources
 # copy Snakemake file and config
 COPY .env Snakefile ./
 
+# Ensure UV virtual environment binaries are in PATH
+ENV PATH="/app/.venv/bin:$PATH"
+
 # run cli command by default
-ENTRYPOINT ["python3", "-m", "bio3dbeacons.cli"]
+ENTRYPOINT ["uv", "run", "3dbeacons-cli"]

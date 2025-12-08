@@ -1,8 +1,0 @@
-pytest-asyncio
-coverage[toml]
-mongomock
-pytest
-motor
-python-dotenv
-prettyconf
-sparqlwrapper

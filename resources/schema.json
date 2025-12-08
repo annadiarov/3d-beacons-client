@@ -120,9 +120,6 @@
         "modelType",
         "mappingDescription",
         "confidenceType",
-        "confidenceAvgLocalScore",
-        "createdDate",
-        "sequenceIdentity",
-        "coverage"
+        "confidenceAvgLocalScore"
     ]
 }

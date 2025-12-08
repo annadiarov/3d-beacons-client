@@ -28,7 +28,8 @@ def compare_files(*, got, expected):
     got = f"{got}"
     expected = f"{expected}"
 
-    are_files_identical = filecmp.cmp(got, expected)
+    # Compare file contents, not metadata
+    are_files_identical = filecmp.cmp(got, expected, shallow=False)
 
     if not are_files_identical:
         diff_result = list(

@@ -1,16 +1,16 @@
 # pull the official docker image
-FROM continuumio/miniconda3
+FROM python:3.12-slim
 
-# install Gemmi from conda-forge
-RUN conda install -c conda-forge gemmi
+# install Gemmi from system
+RUN apt-get update && apt-get install -y gemmi && rm -rf /var/lib/apt/lists/*
 
 # set work directory
 WORKDIR /app
 
-# Update pip, wheel and setuptools
-RUN pip install --upgrade pip setuptools wheel
+# Install UV
+RUN pip install uv
 
 COPY . /app
 
 # install CLI dependencies
-RUN pip install .
+RUN uv sync

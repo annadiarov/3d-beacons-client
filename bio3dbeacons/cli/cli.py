@@ -17,7 +17,6 @@ config.loaders = [
 
 
 class Config:
-
     LOG_LEVEL = config("LOG_LEVEL", default="INFO")
     MONGO_USERNAME = config("MONGO_USERNAME")
     MONGO_PASSWORD = config("MONGO_PASSWORD")
@@ -116,7 +115,6 @@ def pdb_to_cif(input_pdb: str, output_cif: str):  # pragma: no cover
     type=int,
 )
 def load_mongo(mongo_db_url: str, index_path: str, batch_size: int):  # pragma: no cover
-
     if not mongo_db_url:
         mongo_db_url = Config().MONGO_DB_URL
 
