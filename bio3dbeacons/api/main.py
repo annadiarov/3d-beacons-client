@@ -17,6 +17,12 @@ from bio3dbeacons.api.models.uniprot_model import (
 )
 from bio3dbeacons.api.utils import get_model_asset_url
 
+FORMAT_EXTENSION_MAP = {
+    "MMCIF": "cif",
+    "PDB": "pdb",
+    "BCIF": "bcif",
+}
+
 app = FastAPI(version="2.0.0")
 
 
@@ -94,7 +100,7 @@ async def get_uniprot_summary_api(
                     model_identifier=row["entryId"],
                     model_category=row["modelCategory"],
                     model_url=get_model_asset_url(
-                        row["entryId"], os.environ.get("MODEL_FORMAT", "cif")
+                        row["entryId"], FORMAT_EXTENSION_MAP.get(os.environ.get("MODEL_FORMAT", "MMCIF"), "cif")
                     ),
                     provider=os.environ.get("PROVIDER"),
                     uniprot_start=row["start"],
