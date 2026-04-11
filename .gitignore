@@ -16,6 +16,7 @@ gemmi
 
 # environment related
 .env
+.env.test
 env.sh
 
 # snakemake
