@@ -17,8 +17,14 @@ def gather_model_ids():
     staging = Path(STAGING_DIR)
     print(f"Searching for models in {staging} ...")
     model_ids = [f.stem for f in staging.iterdir() if f.suffix == ".pdb"]
-    print(f"  ... found {len(model_ids)} model ids")
-    return model_ids
+    json_ids = [f.stem for f in staging.iterdir() if f.suffix == ".json"]
+    model_ids_set = set(model_ids)
+    json_ids_set = set(json_ids)
+    valid_model_ids = json_ids_set.intersection(model_ids_set)
+    print(f"Model id {valid_model_ids} ...")
+
+    print(f"  ... found {len(valid_model_ids)} model ids")
+    return valid_model_ids
 
 
 model_ids = gather_model_ids()
