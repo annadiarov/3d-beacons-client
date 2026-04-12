@@ -1,0 +1,6 @@
+.github/
+tests/
+docker-compose.local.yml
+Makefile
+.env.test
+.env.local

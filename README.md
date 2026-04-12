@@ -21,50 +21,8 @@ The 3D-Beacons Client has been made available as a series of docker containers, 
 #### Download the code
 
 ```
-git clone https://github.com/3D-Beacons/3d-beacons-client.git
+git clone https://github.com/annadiarov/3d-beacons-client.git
 cd 3d-beacons-client
-```
-
-#### Prepare the model data
-
-Every model needs a PDB/CIF file and a JSON file
-(containing metadata about how this model maps to a UniProt entry).
-Note that the related files must have the same name, e.g. `foo1.pdb` and `foo1.json`.
-
-The schema of the metadata JSON file is available on Apiary:
-
-[https://3dbeacons.docs.apiary.io/#reference/0/metadataqualifierjson/get](https://3dbeacons.docs.apiary.io/#reference/0/metadataqualifierjson/get)
-
-```
-mkdir -p ./data/{pdb,cif,metadata,index}
-cp tests/data/pdb/P38398_1jm7.1.A_1_103.pdb ./data/pdb/
-cat tests/data/metadata/P38398_1jm7.1.A_1_103.json
-{
-  "mappingAccession": "P38398",
-  "mappingAccessionType": "uniprot",
-  "start": 1,
-  "end": 103,
-  "modelCategory": "TEMPLATE-BASED",
-  "modelType": "single",
-  "confidenceType": "pLDDT",
-  "confidenceAvgLocalScore": 98.76,
-  "createdDate": "2023-02-23",
-  "sequenceIdentity": 1,
-  "coverage": 0.115
-}
-cp tests/data/metadata/P38398_1jm7.1.A_1_103.json ./data/metadata/
-```
-
-The `./data` directory should now look something like this (the model file has been given a more realistic name):
-
-```
-data
-├── cif
-├── index
-├── metadata
-│   └── P38398_1jm7.1.A_1_103.json
-└── pdb
-    └── P38398_1jm7.1.A_1_103.pdb
 ```
 
 #### Setup local environment
@@ -82,20 +40,51 @@ Note: the following may take a few minutes the first time it is run
 (the resulting images are cached by default, so they should only need to be built once).
 
 ```
-docker-compose up -d
+docker-compose -f docker-compose.yml up -d
 ```
 
 You should now be able to access the API documentation by directing a web browser at port 80 on your local machine:
 
 http://localhost/docs
 
-#### Process the model PDB files
+#### Add/Update data to the database
+
+When you want to add new data or uptate existing data, you will need to add the 
+model files to the `./data/staging` directory.
+Every model needs a PDB file and a JSON file
+(containing metadata about how this model maps to a UniProt entry).
+Note that the related files must have the same filename, e.g. `foo1.pdb` and `foo1.json`.
+
+The schema of the metadata JSON file is available on Apiary:
+
+[https://3dbeacons.docs.apiary.io/#reference/0/metadataqualifierjson/get](https://3dbeacons.docs.apiary.io/#reference/0/metadataqualifierjson/get)
+
+```
+mkdir -p ./data/staging
+cp tests/data/pdb/P38398_1jm7.1.A_1_103.pdb ./data/staging/
+cp tests/data/metadata/P38398_1jm7.1.A_1_103.json ./data/staging/
+```
+
+The `./data` directory should now look something like this:
+
+```
+data
+└── staging
+    ├── P38398_1jm7.1.A_1_103.json
+    └── P38398_1jm7.1.A_1_103.pdb
+```
+
+Then we can run the Snakemake workflow to process the files in `./data/staging` 
+and move the processed files to the appropriate directories for serving and loading to the database.
 
 The following command will:
-
+- check which files in `./data/staging` have a PDB and JSON file pair, and skip those which do not have both files.
+- copy files from staging to hash-based subdirectories based on the filename
+- generates pdb, cif, metadata and index directories if not already present in the hash-based subdirectory
 - convert PDB files to CIF files
 - convert CIF and METADATA files to JSON index files
 - load JSON index files into the database (MongoDB)
+- remove processed files from `./data/staging` 
 
 ```
 docker-compose exec cli snakemake --cores=2
@@ -105,15 +94,17 @@ The `./data` directory should now look like:
 
 ```
 data
-├── cif
-│   └── P38398_1jm7.1.A_1_103.cif
-├── index
-│   ├── P38398_1jm7.1.A_1_103.json
-│   └── P38398_1jm7.1.A_1_103.json.loaded
-├── metadata
-│   └── P38398_1jm7.1.A_1_103.json
-└── pdb
-    └── P38398_1jm7.1.A_1_103.pdb
+└── fa # first two characters of the hash of the filename
+    └── ab  # next two characters of the hash of the filename
+        ├── cif
+        │   └── P38398_1jm7.1.A_1_103.cif
+        ├── index
+        │   ├── P38398_1jm7.1.A_1_103.json
+        │   └── P38398_1jm7.1.A_1_103.json.loaded
+        ├── metadata
+        │   └── P38398_1jm7.1.A_1_103.json
+        └── pdb
+            └── P38398_1jm7.1.A_1_103.pdb
 ```
 
 #### Find the model via API
@@ -135,7 +126,7 @@ curl -X 'GET' \
       "summary": {
         "model_identifier": "P38398_1jm7.1.A_1_103",
         "model_category": "TEMPLATE-BASED",
-        "model_url": "/static/cif/P38398_1jm7.1.A_1_103.cif",
+        "model_url": "/static/fa/ab/cif/P38398_1jm7.1.A_1_103.cif",
         "model_format": "MMCIF",
         "provider": "CHESS",
         "created": "2023-02-23",
@@ -167,7 +158,7 @@ And retrieve the mmCIF file via the `model_url` in that response:
 
 ```
 curl -X 'GET' \
-  'http://localhost/static/cif/P38398_1jm7.1.A_1_103.cif'
+  'http://localhost/static/fa/ab/cif/P38398_1jm7.1.A_1_103.cif'
 ```
 
 Congratulations. You are now ready to connect your API to the 3D Beacons Hub!
@@ -347,30 +338,27 @@ MONGO_PASSWORD=<password>     # password for MongoDB
 PROVIDER=<provider>           # Same as set in earlier section
 MONGO_DB_HOST=mongodb:27017   # Mongo DB docker compose service
 MODEL_FORMAT=<format>         # Same as set in earlier section
-ASSETS_URL=localhost/static   # NGINX docker compose service
-```
-
-Notes:
-
-- if you make any changes to this file _after_ the docker containers have been built, then you will need to rebuild the `cli` containers in order to be able to see those changes within `docker-compose`:
-
-```
-docker-compose up --detach --build cli
+ASSETS_URL=static   # NGINX docker compose service
 ```
 
 ##### Start the necessary services
 
 ```
-docker compose up --build
+docker-compose -f docker-compose.local.yml up -d --build
 ```
 
-The above docker compose command will start API, Mongo DB and NGINX services defined in `docker-compose.yml` file. Each of these services uses environment variables provided in `docker-compose.yml` for its configuration.
+The above docker compose command will start API, Mongo DB and NGINX services defined in `docker-compose.local.yml` file. Each of these services uses environment variables provided in `docker-compose.local.yml` for its configuration.
 
 Once the docker compose command is executed and services started, API docs can be accessed using [http://localhost/docs](http://localhost/docs). This is the default SwaggerHub style document auto generated by FastAPI.
 Also Mongo DB can be accessed using [Mongo Shell](https://docs.mongodb.com/mongodb-shell/#mongodb-binary-bin.mongosh) using the below command,
 
 ```
 mongosh mongodb://<MONGO_USERNAME>:<MONGO_PASSWORD>@localhost:27017
+```
+Or using the existing Makefile statement
+
+```
+make mongodb user=MONGO_USERNAME
 ```
 
 **NOTE**: If you check the NGINX service in `docker-compose.yml`, `/var/www/static` directory in NGINX is mounted with `data` directory in the project root. This is where the model files need to be kept for serving via file server. API is configured to expect CIF files to be kept in `data/cif` and PDB files to be in `data/pdb` directories. If another directory is used (which obvioulsly in most cases), replace `./data` in `docker-compose.yml` with the proper path where your model files are present. But make sure you still keep them in `cif` and `pdb` subdirectories accordingly.
@@ -483,11 +471,14 @@ Please make sure to keep the docker compose services up as the tests will be run
 ```
 # set the env variables from 'Develop API locally' section
 make test  # Uses uv to run tests
+make test-with-coverage
 ```
 
 ### Workflow automation using pre-commit hooks
 
-Code formatting and PEP8 compliance are automated using [pre-commit](https://pre-commit.com/) hooks with [Ruff](https://github.com/astral-sh/ruff) for linting and formatting. This is configured in `.pre-commit-config.yaml` which will run these hooks before `commit` ting anything to the repository. Run below command to run all the pre-commit hooks.
+Code formatting and PEP8 compliance are automated using [pre-commit](https://pre-commit.com/) hooks with [Ruff](https://github.com/astral-sh/ruff) for linting and formatting. This is configured in `.pre-commit-config.yaml` which will run these hooks before `commit` ting anything to the repository. Run below command to run all the pre-commit hooks. 
+
+Note: you must have the uv locally installed for running this command.
 
 ```
 make pre-commit  # Uses UV to run pre-commit hooks

@@ -1,61 +1,116 @@
 # type: ignore
 
 from pathlib import Path
+from bio3dbeacons.hashpath import get_hash_subdir
 
 DATA_ROOT = "data"
-PDB_DIR = f"{DATA_ROOT}/pdb"
-CIF_DIR = f"{DATA_ROOT}/cif"
-METADATA_DIR = f"{DATA_ROOT}/metadata"
-INDEX_DIR = f"{DATA_ROOT}/index"
+STAGING_DIR = f"{DATA_ROOT}/staging"
 
 CLI = "3dbeacons-cli"
 
-
-def init():
-    dirs = [PDB_DIR, CIF_DIR, METADATA_DIR, INDEX_DIR]
-    for dir in dirs:
-        Path(dir).mkdir(parents=True, exist_ok=True)
-
+def hash_dir(model):
+    """Return the hash-based root for a model, e.g. data/e_c/5_9"""
+    return f"{DATA_ROOT}/{get_hash_subdir(model)}"
 
 def gather_model_ids():
-    init()
-    pdb_dir = Path(PDB_DIR)
-    cif_dir = Path(CIF_DIR)
-    print(f"Searching for models in {cif_dir} ...")
-    model_ids = [f.stem for f in cif_dir.iterdir() if f.suffix == '.cif']
-    if not model_ids:
-        print(f"Searching for models in {pdb_dir} ...")
-        model_ids = [f.stem for f in pdb_dir.iterdir() if f.suffix == '.pdb']
-    print(f"  ... found {len(model_ids)} model ids")
-    return model_ids
+    """Discover model ids from PDB files in the staging directory."""
+    staging = Path(STAGING_DIR)
+    print(f"Searching for models in {staging} ...")
+    model_ids = [f.stem for f in staging.iterdir() if f.suffix == ".pdb"]
+    json_ids = [f.stem for f in staging.iterdir() if f.suffix == ".json"]
+    model_ids_set = set(model_ids)
+    json_ids_set = set(json_ids)
+    valid_model_ids = json_ids_set.intersection(model_ids_set)
+    print(f"Model id {valid_model_ids} ...")
+
+    print(f"  ... found {len(valid_model_ids)} model ids")
+    return valid_model_ids
 
 
 model_ids = gather_model_ids()
 
 rule all:
     input:
-        expand(f"{INDEX_DIR}/{{model}}.json.loaded", model=model_ids)
+        [f"{STAGING_DIR}/{m}.cleaned" for m in model_ids]
+
+rule stage:
+    """Copy PDB and metadata JSON from staging into a hash-based subdirectory."""
+    input:
+        pdb=f"{STAGING_DIR}/{{model}}.pdb",
+        metadata=f"{STAGING_DIR}/{{model}}.json",
+    output:
+        marker=f"{STAGING_DIR}/{{model}}.staged",
+    params:
+        pdb_dir=lambda wc: f"{hash_dir(wc.model)}/pdb",
+        metadata_dir=lambda wc: f"{hash_dir(wc.model)}/metadata",
+    shell:
+        "mkdir -p {params.pdb_dir} && "
+        "mkdir -p {params.metadata_dir} && "
+        "cp {input.pdb} {params.pdb_dir}/ && "
+        "cp {input.metadata} {params.metadata_dir}/ && "
+        "touch {output.marker}"
 
 rule pdb2cif:
+    """Convert a staged PDB file to mmCIF in its hash-based directory."""
     input:
-        f"{PDB_DIR}/{{model}}.pdb"
+        f"{STAGING_DIR}/{{model}}.staged",
     output:
-        f"{CIF_DIR}/{{model}}.cif"
+        marker=f"{STAGING_DIR}/{{model}}.converted",
+    params:
+        pdb_path=lambda wc: f"{hash_dir(wc.model)}/pdb/{wc.model}.pdb",
+        cif_dir=lambda wc: f"{hash_dir(wc.model)}/cif",
+        cif_path=lambda wc: f"{hash_dir(wc.model)}/cif/{wc.model}.cif",
     shell:
-        f"{CLI} convert-pdb2cif -i {{input}} -o {{output}}"
+        "mkdir -p {params.cif_dir} && "
+        f"{CLI} convert-pdb2cif -i {{params.pdb_path}} -o {{params.cif_path}} && "
+        "touch {output.marker}"
 
 rule cif2index:
+    """Create an index JSON document from CIF + metadata in the hash-based directory."""
     input:
-        f"{CIF_DIR}/{{model}}.cif", f"{METADATA_DIR}/{{model}}.json"
+        f"{STAGING_DIR}/{{model}}.converted",
     output:
-        f"{INDEX_DIR}/{{model}}.json"
+        marker=f"{STAGING_DIR}/{{model}}.indexed",
+    params:
+        cif_path=lambda wc: f"{hash_dir(wc.model)}/cif/{wc.model}.cif",
+        metadata_path=lambda wc: f"{hash_dir(wc.model)}/metadata/{wc.model}.json",
+        index_dir=lambda wc: f"{hash_dir(wc.model)}/index",
+        index_path=lambda wc: f"{hash_dir(wc.model)}/index/{wc.model}.index.json",
     shell:
-        f"{CLI} convert-cif2index -ic {{input[0]}} -im {{input[1]}} -o {{output}}"
+        "mkdir -p {params.index_dir} && "
+        f"{CLI} convert-cif2index -ic {{params.cif_path}} -im {{params.metadata_path}} -o {{params.index_path}} && "
+        "touch {output.marker}"
 
 rule loadindex:
+    """Load the index JSON document into MongoDB."""
     input:
-        f"{INDEX_DIR}/{{model}}.json"
+        f"{STAGING_DIR}/{{model}}.indexed"
     output:
-        f"{INDEX_DIR}/{{model}}.json.loaded"
+        marker=f"{STAGING_DIR}/{{model}}.loaded",
+    params:
+        index_path=lambda wc: f"{hash_dir(wc.model)}/index/{wc.model}.index.json",
     shell:
-        f"{CLI} load-index -i {{input}} && touch {{output}}"
+        f"{CLI} load-index -i {{params.index_path}} && "
+        "touch {output.marker}"
+
+rule cleanup:
+    """Remove all staging files for a model after successful DB load."""
+    input:
+        f"{STAGING_DIR}/{{model}}.loaded",
+    output:
+        marker=f"{STAGING_DIR}/{{model}}.cleaned",
+    params:
+        staging_dir=STAGING_DIR,
+    shell:
+        "rm -f {params.staging_dir}/{wildcards.model}.pdb "
+        "      {params.staging_dir}/{wildcards.model}.json "
+        "      {params.staging_dir}/{wildcards.model}.staged "
+        "      {params.staging_dir}/{wildcards.model}.converted "
+        "      {params.staging_dir}/{wildcards.model}.indexed "
+        "      {params.staging_dir}/{wildcards.model}.loaded && "
+        "touch {output.marker}"
+
+onsuccess:
+    import glob
+    for f in glob.glob(f"{STAGING_DIR}/*.cleaned"):
+        os.remove(f)
