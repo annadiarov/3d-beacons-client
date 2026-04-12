@@ -20,9 +20,7 @@ RUN apt-get update && apt-get install -y gemmi git && rm -rf /var/lib/apt/lists/
 COPY --from=ghcr.io/astral-sh/uv:latest /uv /usr/local/bin/uv
 
 # Copy project files for building
-COPY pyproject.toml uv.lock LICENSE README.md ./ 
-# To include test in the image. Only used for debugging purposes, not for production. 
-# COPY tests ./tests  
+COPY pyproject.toml uv.lock LICENSE README.md ./
 COPY bio3dbeacons bio3dbeacons
 
 # Install python dependencies with CLI extras
