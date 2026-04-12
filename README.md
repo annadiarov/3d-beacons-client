@@ -21,50 +21,8 @@ The 3D-Beacons Client has been made available as a series of docker containers, 
 #### Download the code
 
 ```
-git clone https://github.com/3D-Beacons/3d-beacons-client.git
+git clone https://github.com/annadiarov/3d-beacons-client.git
 cd 3d-beacons-client
-```
-
-#### Prepare the model data
-
-Every model needs a PDB/CIF file and a JSON file
-(containing metadata about how this model maps to a UniProt entry).
-Note that the related files must have the same name, e.g. `foo1.pdb` and `foo1.json`.
-
-The schema of the metadata JSON file is available on Apiary:
-
-[https://3dbeacons.docs.apiary.io/#reference/0/metadataqualifierjson/get](https://3dbeacons.docs.apiary.io/#reference/0/metadataqualifierjson/get)
-
-```
-mkdir -p ./data/{pdb,cif,metadata,index}
-cp tests/data/pdb/P38398_1jm7.1.A_1_103.pdb ./data/pdb/
-cat tests/data/metadata/P38398_1jm7.1.A_1_103.json
-{
-  "mappingAccession": "P38398",
-  "mappingAccessionType": "uniprot",
-  "start": 1,
-  "end": 103,
-  "modelCategory": "TEMPLATE-BASED",
-  "modelType": "single",
-  "confidenceType": "pLDDT",
-  "confidenceAvgLocalScore": 98.76,
-  "createdDate": "2023-02-23",
-  "sequenceIdentity": 1,
-  "coverage": 0.115
-}
-cp tests/data/metadata/P38398_1jm7.1.A_1_103.json ./data/metadata/
-```
-
-The `./data` directory should now look something like this (the model file has been given a more realistic name):
-
-```
-data
-├── cif
-├── index
-├── metadata
-│   └── P38398_1jm7.1.A_1_103.json
-└── pdb
-    └── P38398_1jm7.1.A_1_103.pdb
 ```
 
 #### Setup local environment
@@ -89,13 +47,44 @@ You should now be able to access the API documentation by directing a web browse
 
 http://localhost/docs
 
-#### Process the model PDB files
+#### Add/Update data to the database
+
+When you want to add new data or uptate existing data, you will need to add the 
+model files to the `./data/staging` directory.
+Every model needs a PDB file and a JSON file
+(containing metadata about how this model maps to a UniProt entry).
+Note that the related files must have the same filename, e.g. `foo1.pdb` and `foo1.json`.
+
+The schema of the metadata JSON file is available on Apiary:
+
+[https://3dbeacons.docs.apiary.io/#reference/0/metadataqualifierjson/get](https://3dbeacons.docs.apiary.io/#reference/0/metadataqualifierjson/get)
+
+```
+mkdir -p ./data/staging
+cp tests/data/pdb/P38398_1jm7.1.A_1_103.pdb ./data/staging/
+cp tests/data/metadata/P38398_1jm7.1.A_1_103.json ./data/staging/
+```
+
+The `./data` directory should now look something like this:
+
+```
+data
+└── staging
+    ├── P38398_1jm7.1.A_1_103.json
+    └── P38398_1jm7.1.A_1_103.pdb
+```
+
+Then we can run the Snakemake workflow to process the files in `./data/staging` 
+and move the processed files to the appropriate directories for serving and loading to the database.
 
 The following command will:
-
+- check which files in `./data/staging` have a PDB and JSON file pair, and skip those which do not have both files.
+- copy files from staging to hash-based subdirectories based on the filename
+- generates pdb, cif, metadata and index directories if not already present in the hash-based subdirectory
 - convert PDB files to CIF files
 - convert CIF and METADATA files to JSON index files
 - load JSON index files into the database (MongoDB)
+- remove processed files from `./data/staging` 
 
 ```
 docker-compose exec cli snakemake --cores=2
@@ -105,15 +94,17 @@ The `./data` directory should now look like:
 
 ```
 data
-├── cif
-│   └── P38398_1jm7.1.A_1_103.cif
-├── index
-│   ├── P38398_1jm7.1.A_1_103.json
-│   └── P38398_1jm7.1.A_1_103.json.loaded
-├── metadata
-│   └── P38398_1jm7.1.A_1_103.json
-└── pdb
-    └── P38398_1jm7.1.A_1_103.pdb
+└── fa # first two characters of the hash of the filename
+    └── ab  # next two characters of the hash of the filename
+        ├── cif
+        │   └── P38398_1jm7.1.A_1_103.cif
+        ├── index
+        │   ├── P38398_1jm7.1.A_1_103.json
+        │   └── P38398_1jm7.1.A_1_103.json.loaded
+        ├── metadata
+        │   └── P38398_1jm7.1.A_1_103.json
+        └── pdb
+            └── P38398_1jm7.1.A_1_103.pdb
 ```
 
 #### Find the model via API
@@ -135,7 +126,7 @@ curl -X 'GET' \
       "summary": {
         "model_identifier": "P38398_1jm7.1.A_1_103",
         "model_category": "TEMPLATE-BASED",
-        "model_url": "/static/cif/P38398_1jm7.1.A_1_103.cif",
+        "model_url": "/static/fa/ab/cif/P38398_1jm7.1.A_1_103.cif",
         "model_format": "MMCIF",
         "provider": "CHESS",
         "created": "2023-02-23",
@@ -167,7 +158,7 @@ And retrieve the mmCIF file via the `model_url` in that response:
 
 ```
 curl -X 'GET' \
-  'http://localhost/static/cif/P38398_1jm7.1.A_1_103.cif'
+  'http://localhost/static/fa/ab/cif/P38398_1jm7.1.A_1_103.cif'
 ```
 
 Congratulations. You are now ready to connect your API to the 3D Beacons Hub!
