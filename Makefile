@@ -1,6 +1,7 @@
 default: test
 
-DOCKER_EXEC_CLI := docker exec -ti cli-local
+CLI_CONTAINER_NAME := cli-local # this name will depend on the docker-compose file loaded. Use docker ps to choose the correct name.
+DOCKER_EXEC_CLI := docker exec -ti $(CLI_CONTAINER_NAME)
 DOCKER_EXEC_MONGO := docker exec -ti 3d-beacons-client-mongodb-1
 
 cli-bash:
