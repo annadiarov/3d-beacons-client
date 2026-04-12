@@ -37,6 +37,7 @@ services:
       - ./bio3dbeacons:/app/bio3dbeacons
       - ./tests:/app/tests
       - ./resources:/app/resources
+      - ./Snakefile:/app/Snakefile
     entrypoint: "tail -F anything"
 
   mongodb:
