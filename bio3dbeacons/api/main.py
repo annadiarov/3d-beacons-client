@@ -6,7 +6,7 @@ from fastapi.params import Path, Query
 from starlette import status
 from starlette.responses import HTMLResponse, JSONResponse
 
-from bio3dbeacons.api import SingletonMongoDB
+from bio3dbeacons.api import SingletonMongoDB, ASSETS_URL
 from bio3dbeacons.api.constants import UNIPROT_QUAL_DESC, UNIPROT_RANGE_DESC
 from bio3dbeacons.api.models.uniprot_model import (
     UniprotSummary,
@@ -100,7 +100,9 @@ async def get_uniprot_summary_api(
                     model_identifier=row["entryId"],
                     model_category=row["modelCategory"],
                     model_url=get_model_asset_url(
-                        row["entryId"], FORMAT_EXTENSION_MAP.get(os.environ.get("MODEL_FORMAT", "MMCIF"), "cif")
+                        ASSETS_URL,
+                        row["entryId"],
+                        FORMAT_EXTENSION_MAP.get(os.environ.get("MODEL_FORMAT", "MMCIF"),"cif")
                     ),
                     provider=os.environ.get("PROVIDER"),
                     uniprot_start=row["start"],
