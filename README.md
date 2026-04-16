@@ -107,6 +107,20 @@ data
             └── P38398_1jm7.1.A_1_103.pdb
 ```
 
+#### Remove a PDB from the Database
+
+You can run inside the container the following command for deleting a list of PDB IDs:
+
+```
+python bio3dbeacons/cli/cli.py delete-by-ids --no-dry-run ID_1 ID_2
+```
+
+If you want to perform a dry-run first use:
+
+```
+python bio3dbeacons/cli/cli.py delete-by-ids --dry-run ID_1 ID_2
+```
+
 #### Find the model via API
 
 We can now search for this model via the API:
