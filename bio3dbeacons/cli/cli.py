@@ -10,7 +10,7 @@ from bio3dbeacons.cli.ciftojson import ciftojson
 from bio3dbeacons.cli.mongoload import mongoload
 from bio3dbeacons.cli.pdbtocif import pdbtocif
 from bio3dbeacons.cli.validatejson import validatejson
-from bio3dbeacons.cli.pdbmanager import pdbmanager
+from bio3dbeacons.cli.modelmanager import modelmanager
 
 config.loaders = [
     Environment(var_format=str.upper),
@@ -136,15 +136,15 @@ def validate_index_json(index_path):
 
 @main.command("delete-by-ids")
 @click.option("--dry-run/--no-dry-run", default=True, help="Dry run, do not delete ids")
-@click.argument("pdb_ids", nargs=-1, required=True)
-def delete_pdbs_by_id(dry_run: bool, pdb_ids: List[str]):
+@click.argument("model_ids", nargs=-1, required=True)
+def delete_pdbs_by_id(dry_run: bool, model_ids: List[str]):
     if dry_run:
         print("Dry run mode")
-        print(f"Simulating deletion of {len(pdb_ids)} PDBs")
+        print(f"Simulating deletion of {len(model_ids)} PDBs")
 
         return 0
     else:
-        pdbmanager.delete_by_ids(Config().MONGO_DB_URL, pdb_ids)
+        modelmanager.delete_by_ids(Config().MONGO_DB_URL, model_ids)
 
     return 0
 
