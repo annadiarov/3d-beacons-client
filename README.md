@@ -109,7 +109,7 @@ data
 
 #### Remove a model from the Database
 
-You can run inside the containers cli-local/3d-beacons-client-cli-1 the following command for deleting a list of model IDs:
+You can run inside the containers cli-local/3d-beacons-client-cli-1 (eg. `docker exec -ti 3d-beacons-client-cli-1 bash`) the following command for deleting a list of model IDs:
 
 ```
 python bio3dbeacons/cli/cli.py delete-by-ids --no-dry-run ID_1 ID_2
