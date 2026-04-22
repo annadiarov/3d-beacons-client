@@ -90,7 +90,7 @@ rule loadindex:
     params:
         index_path=lambda wc: f"{hash_dir(wc.model)}/index/{wc.model}.index.json",
     shell:
-        f"{CLI} load-index -i {{params.index_path}} && "
+        # f"{CLI} load-index -i {{params.index_path}} && "
         "touch {output.marker}"
 
 rule cleanup:
@@ -106,7 +106,7 @@ rule cleanup:
         "      {params.staging_dir}/{wildcards.model}.json "
         "      {params.staging_dir}/{wildcards.model}.staged "
         "      {params.staging_dir}/{wildcards.model}.converted "
-        "      {params.staging_dir}/{wildcards.model}.indexed "
+        # "      {params.staging_dir}/{wildcards.model}.indexed "
         "      {params.staging_dir}/{wildcards.model}.loaded && "
         "touch {output.marker}"
 
