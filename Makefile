@@ -4,6 +4,12 @@ CLI_CONTAINER_NAME := cli-local # this name will depend on the docker-compose fi
 DOCKER_EXEC_CLI := docker exec -ti $(CLI_CONTAINER_NAME)
 DOCKER_EXEC_MONGO := docker exec -ti 3d-beacons-client-mongodb-1
 
+ifeq ($(shell command -v docker-compose 2>/dev/null),)
+    DOCKER_COMPOSE:=docker compose
+else
+    DOCKER_COMPOSE:=docker-compose
+endif
+
 cli-bash:
 	$(DOCKER_EXEC_CLI) bash
 
@@ -17,7 +23,7 @@ pre-commit:
 	uv tool run pre-commit install && uv tool run pre-commit run --all
 
 test:
-	$(DOCKER_EXEC_CLI) bash -c "uv sync --extra test && pytest tests"
+	$(DOCKER_EXEC_CLI) bash -c "uv sync --extra test && pytest -q tests"
 
 cli-load-db-data:
 	$(DOCKER_EXEC_CLI) bash -c "snakemake --cores=2"
@@ -27,3 +33,12 @@ mongodb: #example: make mongodb user=lpdi
 	# Inside the mongosh run for demo check:
 	# 	use models
 	#	db.modelCollection.find({_id:'P38398_1jm7.1.A_1_103'}).pretty()
+
+start-prd:
+	$(DOCKER_COMPOSE) -f docker-compose.yml up -d
+
+start-local:
+	$(DOCKER_COMPOSE) -f ./docker-compose.local.yml up -d
+
+down:
+	$(DOCKER_COMPOSE) down
