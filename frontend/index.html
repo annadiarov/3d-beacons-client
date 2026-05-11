@@ -161,7 +161,7 @@
           const data = await response.json();
           const isEmptyObject = data && typeof data === 'object' && !Array.isArray(data) && Object.keys(data).length === 0;
           if (!data || isEmptyObject) {
-            state.results[id] = { error: 'HTTP 404 – no models found' };
+            state.results[id] = { error: 'No models found (empty response)' };
             return;
           }
           state.results[id] = data;
@@ -463,7 +463,12 @@
             }
             const blob = await response.blob();
             const match = /\.([a-zA-Z0-9]+)(?:\?|$)/.exec(model.modelUrl);
-            const extension = match ? '.' + match[1] : '.cif';
+            const formatMap = {
+              MMCIF: '.cif',
+              CIF: '.cif',
+              PDB: '.pdb',
+            };
+            const extension = match ? '.' + match[1] : (formatMap[String(model.modelFormat || '').toUpperCase()] || '.cif');
             zip.file(model.modelId + extension, blob);
           } catch (error) {
             // skip failed downloads
@@ -472,7 +477,7 @@
 
         statusElement.textContent = 'Zipping ' + zip.file(/.*/).length + ' file(s)…';
         const zipBlob = await zip.generateAsync({ type: 'blob' });
-        const timestamp = new Date().toISOString().replace(/[.:]/g, '-');
+        const timestamp = new Date().toISOString().replace('T', '_').replace('Z', '').replace(/[.:]/g, '-');
         saveAs(zipBlob, 'bindome_models_' + mode + '_' + timestamp + '.zip');
         statusElement.textContent = 'Download ready with ' + zip.file(/.*/).length + ' file(s).';
       }
