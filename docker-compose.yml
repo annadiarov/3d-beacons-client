@@ -57,6 +57,7 @@ services:
     volumes:
       - ./docker/nginx/default.conf:/tmp/default.conf
       - ./data:/var/www/static
+      - ./frontend:/var/www/frontend
     environment:
       - API_SERVER_ADDR=web:8000
     depends_on:

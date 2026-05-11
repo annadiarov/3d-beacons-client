@@ -1,0 +1,509 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Bindome Structure Browser</title>
+    <link
+      href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css"
+      rel="stylesheet"
+    />
+    <link
+      rel="stylesheet"
+      href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.min.css"
+    />
+    <style>
+      body {
+        background-color: #f6f8fa;
+      }
+
+      #ngl-viewer {
+        width: 100%;
+        height: 500px;
+        background: #1a1a2e;
+        border-radius: 0.375rem;
+      }
+
+      .model-row.selected {
+        background-color: #e7f1ff;
+      }
+
+      .swatch {
+        display: inline-block;
+        width: 0.9rem;
+        height: 0.9rem;
+        border-radius: 0.15rem;
+        border: 1px solid rgba(0, 0, 0, 0.12);
+        margin-right: 0.25rem;
+        vertical-align: text-bottom;
+      }
+
+      .min-w-nowrap {
+        white-space: nowrap;
+      }
+    </style>
+  </head>
+  <body>
+    <nav class="navbar navbar-dark bg-dark mb-3" aria-label="Primary">
+      <div class="container-fluid">
+        <span class="navbar-brand mb-0 h1">Bindome Structure Browser</span>
+      </div>
+    </nav>
+
+    <main class="container-fluid pb-4">
+      <div class="row g-3">
+        <section class="col-12 col-lg-7" aria-label="Search and results">
+          <div class="card mb-3">
+            <div class="card-body">
+              <h2 class="h5 card-title">Search UniProt accessions</h2>
+              <label for="uniprot-input" class="form-label visually-hidden">UniProt IDs</label>
+              <textarea
+                id="uniprot-input"
+                class="form-control"
+                rows="4"
+                placeholder="Enter UniProt IDs (comma, space, semicolon or newline separated)"
+                aria-label="UniProt accession input"
+              ></textarea>
+              <div class="d-flex gap-2 mt-3 align-items-center">
+                <button id="search-btn" type="button" class="btn btn-primary">
+                  <span id="search-spinner" class="spinner-border spinner-border-sm me-2 d-none" role="status" aria-hidden="true"></span>
+                  <span>Search</span>
+                </button>
+                <button id="clear-btn" type="button" class="btn btn-outline-secondary">Clear</button>
+              </div>
+            </div>
+          </div>
+
+          <div id="results-container" aria-live="polite"></div>
+
+          <div id="download-card" class="card mt-3 d-none">
+            <div class="card-body">
+              <h2 class="h6 card-title">Downloads</h2>
+              <div class="d-flex flex-wrap gap-2 mb-2">
+                <button id="download-all-btn" type="button" class="btn btn-success btn-sm">
+                  <i class="bi bi-download me-1" aria-hidden="true"></i>Download All CIF
+                </button>
+                <button id="download-selected-btn" type="button" class="btn btn-success btn-sm">
+                  <i class="bi bi-download me-1" aria-hidden="true"></i>Download Selected CIF
+                </button>
+              </div>
+              <small id="download-status" class="text-muted" aria-live="polite"></small>
+            </div>
+          </div>
+        </section>
+
+        <section class="col-12 col-lg-5" aria-label="3D viewer">
+          <div class="card h-100">
+            <div class="card-header d-flex justify-content-between align-items-center">
+              <h2 class="h5 mb-0">3D Structure Viewer</h2>
+              <div class="d-flex gap-2">
+                <button id="view-selected-btn" type="button" class="btn btn-primary btn-sm">View Selected</button>
+                <button id="clear-viewer-btn" type="button" class="btn btn-outline-secondary btn-sm">Clear</button>
+              </div>
+            </div>
+            <div class="card-body">
+              <div id="ngl-viewer" role="img" aria-label="NGL protein structure viewer"></div>
+              <div class="mt-2 small text-muted">
+                <span class="swatch" style="background:#999999"></span>Chain A
+                <span class="ms-3 swatch" style="background:#4169e1"></span>Chain B
+                <span class="ms-3 swatch" style="background:#d0d0d0"></span>Other chains
+              </div>
+              <small id="viewer-status" class="text-muted d-block mt-2" aria-live="polite"></small>
+            </div>
+          </div>
+        </section>
+      </div>
+    </main>
+
+    <script
+      src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"
+    ></script>
+    <script src="https://unpkg.com/ngl@2.0.0-dev.38/dist/ngl.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/jszip@3.10.1/dist/jszip.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/file-saver@2.0.5/dist/FileSaver.min.js"></script>
+    <script>
+      const state = {
+        results: {},
+        selected: new Set(),
+      };
+      let nglStage = null;
+
+      const CATEGORY_BADGES = {
+        'EXPERIMENTALLY DETERMINED': 'bg-success',
+        'DEEP-LEARNING': 'bg-primary',
+        'TEMPLATE-BASED': 'bg-info text-dark',
+        'AB-INITIO': 'bg-warning text-dark',
+        'CONFORMATIONAL ENSEMBLE': 'bg-secondary',
+      };
+
+      function initViewer() {
+        nglStage = new NGL.Stage('ngl-viewer');
+        window.addEventListener('resize', () => {
+          if (nglStage) {
+            nglStage.handleResize();
+          }
+        });
+      }
+
+      function parseUniProtInput() {
+        const input = document.getElementById('uniprot-input').value;
+        return [...new Set(input.split(/[\s,;]+/).map((id) => id.trim().toUpperCase()).filter(Boolean))];
+      }
+
+      async function fetchUniprotSummary(id) {
+        try {
+          const response = await fetch('/uniprot/summary/' + encodeURIComponent(id) + '.json');
+          if (!response.ok) {
+            state.results[id] = { error: 'HTTP ' + response.status + ' – no models found' };
+            return;
+          }
+
+          const data = await response.json();
+          const isEmptyObject = data && typeof data === 'object' && !Array.isArray(data) && Object.keys(data).length === 0;
+          if (!data || isEmptyObject) {
+            state.results[id] = { error: 'HTTP 404 – no models found' };
+            return;
+          }
+          state.results[id] = data;
+        } catch (error) {
+          state.results[id] = { error: 'Request failed' };
+        }
+      }
+
+      function formatPercent(value) {
+        return Number.isFinite(value) ? (value * 100).toFixed(1) + '%' : '–';
+      }
+
+      function escapeHtml(value) {
+        return String(value)
+          .replaceAll('&', '&amp;')
+          .replaceAll('<', '&lt;')
+          .replaceAll('>', '&gt;')
+          .replaceAll('"', '&quot;')
+          .replaceAll("'", '&#39;');
+      }
+
+      function modelAttrValue(modelId) {
+        return encodeURIComponent(String(modelId));
+      }
+
+      function getConfidenceBadge(value) {
+        if (!Number.isFinite(value)) {
+          return '<span>–</span>';
+        }
+        let badgeClass = 'text-bg-danger';
+        if (value >= 0.7) {
+          badgeClass = 'text-bg-success';
+        } else if (value >= 0.5) {
+          badgeClass = 'text-bg-warning text-dark';
+        }
+        return '<span class="badge ' + badgeClass + '">' + value.toFixed(2) + '</span>';
+      }
+
+      function getAllModels() {
+        const models = [];
+        Object.entries(state.results).forEach(([uniprotId, result]) => {
+          if (!result || result.error || !Array.isArray(result.structures)) {
+            return;
+          }
+          result.structures.forEach((structure) => {
+            if (structure && structure.summary && structure.summary.model_identifier && structure.summary.model_url) {
+              models.push({
+                uniprotId,
+                modelId: structure.summary.model_identifier,
+                modelUrl: structure.summary.model_url,
+                modelFormat: structure.summary.model_format,
+              });
+            }
+          });
+        });
+        return models;
+      }
+
+      function toggleModel(modelId, checked) {
+        if (checked) {
+          state.selected.add(modelId);
+        } else {
+          state.selected.delete(modelId);
+        }
+        const attrValue = modelAttrValue(modelId);
+        document.querySelectorAll('tr[data-model-id="' + CSS.escape(attrValue) + '"]').forEach((row) => {
+          row.classList.toggle('selected', state.selected.has(modelId));
+        });
+      }
+
+      function resolveModelUrl(url) {
+        if (/^https?:\/\//i.test(url)) {
+          return url;
+        }
+        return url.startsWith('/') ? url : '/' + url;
+      }
+
+      async function loadStructure(url, name) {
+        const resolvedUrl = resolveModelUrl(url);
+        const comp = await nglStage.loadFile(resolvedUrl, { name });
+        comp.addRepresentation('cartoon', { sele: ':A', color: '#999999' });
+        comp.addRepresentation('cartoon', { sele: ':B', color: '#4169e1' });
+        comp.addRepresentation('cartoon', { sele: 'not :A and not :B', color: '#d0d0d0' });
+        return comp;
+      }
+
+      function setViewerStatus(message) {
+        document.getElementById('viewer-status').textContent = message;
+      }
+
+      async function viewSelectedModels() {
+        if (!nglStage) {
+          return;
+        }
+
+        const allModels = getAllModels();
+        const selectedModels = allModels.filter((model) => state.selected.has(model.modelId));
+        nglStage.removeAllComponents();
+
+        if (!selectedModels.length) {
+          setViewerStatus('No models selected.');
+          return;
+        }
+
+        setViewerStatus('Loading ' + selectedModels.length + ' selected model(s)…');
+        const results = await Promise.allSettled(
+          selectedModels.map((model) => loadStructure(model.modelUrl, model.modelId))
+        );
+        const loaded = results.filter((result) => result.status === 'fulfilled').length;
+
+        if (loaded > 0) {
+          nglStage.autoView();
+        }
+        setViewerStatus('Loaded ' + loaded + ' of ' + selectedModels.length + ' model(s).');
+      }
+
+      function renderModelTable(uniprotId, structures) {
+        if (!Array.isArray(structures) || !structures.length) {
+          return '<div class="alert alert-warning mb-0">No models found.</div>';
+        }
+
+        const rows = structures
+          .map((structure) => {
+            const summary = structure && structure.summary ? structure.summary : {};
+            const modelId = summary.model_identifier || '–';
+            const modelCategory = summary.model_category || summary.model_type || '–';
+            const categoryClass = CATEGORY_BADGES[modelCategory] || 'bg-secondary';
+            const modelIdEscaped = escapeHtml(modelId);
+            const modelIdAttr = modelAttrValue(modelId);
+            const checked = state.selected.has(modelId) ? 'checked' : '';
+            return `
+              <tr class="model-row ${checked ? 'selected' : ''}" data-model-id="${modelIdAttr}">
+                <td class="text-center"><input type="checkbox" class="form-check-input model-checkbox" data-model-id="${modelIdAttr}" ${checked} aria-label="Select model ${modelIdEscaped}" /></td>
+                <td><code>${modelIdEscaped}</code></td>
+                <td><span class="badge ${categoryClass}">${escapeHtml(modelCategory)}</span></td>
+                <td>${escapeHtml(summary.provider || '–')}</td>
+                <td class="min-w-nowrap">${summary.uniprot_start ?? '–'}–${summary.uniprot_end ?? '–'}</td>
+                <td>${formatPercent(summary.coverage)}</td>
+                <td>${formatPercent(summary.sequence_identity)}</td>
+                <td>${getConfidenceBadge(summary.confidence_avg_local_score)}</td>
+                <td>${Number.isFinite(summary.resolution) ? summary.resolution.toFixed(2) : '–'}</td>
+                <td class="min-w-nowrap">${escapeHtml(summary.created || '–')}</td>
+              </tr>
+            `;
+          })
+          .join('');
+
+        return `
+          <div class="table-responsive">
+            <table class="table table-sm table-hover align-middle mb-0">
+              <thead class="table-light">
+                <tr>
+                  <th scope="col" class="text-center">Sel</th>
+                  <th scope="col">Model ID</th>
+                  <th scope="col">Category</th>
+                  <th scope="col">Provider</th>
+                  <th scope="col">UniProt range</th>
+                  <th scope="col">Coverage</th>
+                  <th scope="col">Seq. Identity</th>
+                  <th scope="col">Confidence</th>
+                  <th scope="col">Resolution (Å)</th>
+                  <th scope="col">Created</th>
+                </tr>
+              </thead>
+              <tbody>${rows}</tbody>
+            </table>
+          </div>
+        `;
+      }
+
+      function renderAllResults() {
+        const container = document.getElementById('results-container');
+        container.innerHTML = '';
+
+        Object.entries(state.results).forEach(([uniprotId, result]) => {
+          const name = result?.uniprot_entry?.id || 'Unknown';
+          const count = Array.isArray(result?.structures) ? result.structures.length : 0;
+          const isError = !!result?.error;
+          const uniprotIdEscaped = escapeHtml(uniprotId);
+          const uniprotIdAttr = modelAttrValue(uniprotId);
+          const nameEscaped = escapeHtml(name);
+
+          const card = document.createElement('article');
+          card.className = 'card mb-3';
+          card.innerHTML = `
+            <div class="card-header d-flex justify-content-between align-items-center flex-wrap gap-2">
+              <div>
+                <strong><code>${uniprotIdEscaped}</code></strong>
+                <span class="text-muted ms-2">${isError ? '' : nameEscaped}</span>
+              </div>
+              <div class="d-flex align-items-center gap-2">
+                <span class="badge text-bg-secondary">${count} model(s)</span>
+                <button type="button" class="btn btn-outline-primary btn-sm select-all" data-uniprot-id="${uniprotIdAttr}">All</button>
+                <button type="button" class="btn btn-outline-secondary btn-sm select-none" data-uniprot-id="${uniprotIdAttr}">None</button>
+              </div>
+            </div>
+            <div class="card-body p-0">
+              ${isError ? `<div class="alert alert-warning m-3 mb-0">${escapeHtml(result.error)}</div>` : renderModelTable(uniprotId, result.structures)}
+            </div>
+          `;
+          container.appendChild(card);
+        });
+
+        container.querySelectorAll('.model-checkbox').forEach((checkbox) => {
+          checkbox.addEventListener('change', (event) => {
+            const modelId = decodeURIComponent(event.target.getAttribute('data-model-id'));
+            toggleModel(modelId, event.target.checked);
+          });
+        });
+
+        container.querySelectorAll('.select-all').forEach((button) => {
+          button.addEventListener('click', () => {
+            const result = state.results[decodeURIComponent(button.getAttribute('data-uniprot-id'))];
+            if (!result || !Array.isArray(result.structures)) {
+              return;
+            }
+            result.structures.forEach((structure) => {
+              const modelId = structure?.summary?.model_identifier;
+              if (modelId) {
+                state.selected.add(modelId);
+              }
+            });
+            renderAllResults();
+          });
+        });
+
+        container.querySelectorAll('.select-none').forEach((button) => {
+          button.addEventListener('click', () => {
+            const result = state.results[decodeURIComponent(button.getAttribute('data-uniprot-id'))];
+            if (!result || !Array.isArray(result.structures)) {
+              return;
+            }
+            result.structures.forEach((structure) => {
+              const modelId = structure?.summary?.model_identifier;
+              if (modelId) {
+                state.selected.delete(modelId);
+              }
+            });
+            renderAllResults();
+          });
+        });
+      }
+
+      async function searchUniprots() {
+        const ids = parseUniProtInput();
+        const spinner = document.getElementById('search-spinner');
+
+        if (!ids.length) {
+          document.getElementById('results-container').innerHTML = '<div class="alert alert-info">Please enter one or more UniProt IDs.</div>';
+          return;
+        }
+
+        state.results = {};
+        state.selected.clear();
+        spinner.classList.remove('d-none');
+        document.getElementById('search-btn').setAttribute('disabled', 'disabled');
+
+        await Promise.allSettled(ids.map((id) => fetchUniprotSummary(id)));
+
+        renderAllResults();
+        document.getElementById('download-card').classList.remove('d-none');
+        document.getElementById('download-status').textContent = 'Search complete for ' + ids.length + ' UniProt ID(s).';
+        spinner.classList.add('d-none');
+        document.getElementById('search-btn').removeAttribute('disabled');
+      }
+
+      async function downloadModels(mode) {
+        const statusElement = document.getElementById('download-status');
+        const allModels = getAllModels();
+        let models = allModels;
+
+        if (mode === 'selected') {
+          models = allModels.filter((model) => state.selected.has(model.modelId));
+        }
+
+        const uniqueById = new Map();
+        models.forEach((model) => {
+          if (!uniqueById.has(model.modelId)) {
+            uniqueById.set(model.modelId, model);
+          }
+        });
+        models = Array.from(uniqueById.values());
+
+        if (!models.length) {
+          statusElement.textContent = mode === 'selected' ? 'No selected models to download.' : 'No models to download.';
+          return;
+        }
+
+        statusElement.textContent = 'Fetching ' + models.length + ' file(s)…';
+        const zip = new JSZip();
+
+        for (let index = 0; index < models.length; index += 1) {
+          const model = models[index];
+          statusElement.textContent = 'Downloading ' + (index + 1) + '/' + models.length + ': ' + model.modelId;
+          try {
+            const response = await fetch(resolveModelUrl(model.modelUrl));
+            if (!response.ok) {
+              continue;
+            }
+            const blob = await response.blob();
+            const match = /\.([a-zA-Z0-9]+)(?:\?|$)/.exec(model.modelUrl);
+            const extension = match ? '.' + match[1] : '.cif';
+            zip.file(model.modelId + extension, blob);
+          } catch (error) {
+            // skip failed downloads
+          }
+        }
+
+        statusElement.textContent = 'Zipping ' + zip.file(/.*/).length + ' file(s)…';
+        const zipBlob = await zip.generateAsync({ type: 'blob' });
+        const timestamp = new Date().toISOString().replace(/[.:]/g, '-');
+        saveAs(zipBlob, 'bindome_models_' + mode + '_' + timestamp + '.zip');
+        statusElement.textContent = 'Download ready with ' + zip.file(/.*/).length + ' file(s).';
+      }
+
+      function clearAll() {
+        document.getElementById('uniprot-input').value = '';
+        document.getElementById('results-container').innerHTML = '';
+        document.getElementById('download-status').textContent = '';
+        document.getElementById('download-card').classList.add('d-none');
+        state.results = {};
+        state.selected.clear();
+        if (nglStage) {
+          nglStage.removeAllComponents();
+        }
+        setViewerStatus('Cleared.');
+      }
+
+      document.addEventListener('DOMContentLoaded', () => {
+        initViewer();
+        document.getElementById('search-btn').addEventListener('click', searchUniprots);
+        document.getElementById('clear-btn').addEventListener('click', clearAll);
+        document.getElementById('view-selected-btn').addEventListener('click', viewSelectedModels);
+        document.getElementById('clear-viewer-btn').addEventListener('click', () => {
+          if (nglStage) {
+            nglStage.removeAllComponents();
+          }
+          setViewerStatus('Viewer cleared.');
+        });
+        document.getElementById('download-all-btn').addEventListener('click', () => downloadModels('all'));
+        document.getElementById('download-selected-btn').addEventListener('click', () => downloadModels('selected'));
+      });
+    </script>
+  </body>
+</html>
