@@ -122,6 +122,10 @@
     <script src="https://cdn.jsdelivr.net/npm/jszip@3.10.1/dist/jszip.min.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/file-saver@2.0.5/dist/FileSaver.min.js"></script>
     <script>
+      // Base URL for the 3D Beacons API.
+      // Change to '' (empty string) for same-origin / local-proxy deployments.
+      const API_BASE_URL = 'https://bindome.epfl.ch';
+
       const state = {
         results: {},
         selected: new Set(),
@@ -152,7 +156,7 @@
 
       async function fetchUniprotSummary(id) {
         try {
-          const response = await fetch('/uniprot/summary/' + encodeURIComponent(id) + '.json');
+          const response = await fetch(API_BASE_URL + '/uniprot/summary/' + encodeURIComponent(id) + '.json');
           if (!response.ok) {
             state.results[id] = { error: 'HTTP ' + response.status + ' – no models found' };
             return;
@@ -236,7 +240,8 @@
         if (/^https?:\/\//i.test(url)) {
           return url;
         }
-        return url.startsWith('/') ? url : '/' + url;
+        const path = url.startsWith('/') ? url : '/' + url;
+        return API_BASE_URL + path;
       }
 
       async function loadStructure(url, name) {
