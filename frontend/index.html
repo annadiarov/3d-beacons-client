@@ -122,9 +122,9 @@
     <script src="https://cdn.jsdelivr.net/npm/jszip@3.10.1/dist/jszip.min.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/file-saver@2.0.5/dist/FileSaver.min.js"></script>
     <script>
-      // Base URL for the 3D Beacons API.
-      // Change to '' (empty string) for same-origin / local-proxy deployments.
-      const API_BASE_URL = 'https://bindome.epfl.ch';
+      // Base URL for the 3D Beacons API. Empty string means same-origin (requests
+      // are routed through the nginx reverse proxy to the backend).
+      const API_BASE_URL = '';
 
       const state = {
         results: {},
