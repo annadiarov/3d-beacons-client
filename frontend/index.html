@@ -104,8 +104,8 @@
             <div class="card-body">
               <div id="ngl-viewer" role="img" aria-label="NGL protein structure viewer"></div>
               <div class="mt-2 small text-muted">
-                <span class="swatch" style="background:#999999"></span>Chain A
-                <span class="ms-3 swatch" style="background:#4169e1"></span>Chain B
+                <span class="swatch" style="background:#999999"></span>Chain 1
+                <span class="ms-3 swatch" style="background:#4169e1"></span>Chain 2
                 <span class="ms-3 swatch" style="background:#d0d0d0"></span>Other chains
               </div>
               <small id="viewer-status" class="text-muted d-block mt-2" aria-live="polite"></small>
@@ -170,7 +170,11 @@
           }
           state.results[id] = data;
         } catch (error) {
-          state.results[id] = { error: 'Request failed' };
+          if (error instanceof SyntaxError) {
+            state.results[id] = { error: 'Response could not be parsed (possibly truncated). Check server/proxy configuration.' };
+          } else {
+            state.results[id] = { error: 'Request failed: ' + error.message };
+          }
         }
       }
 
@@ -217,6 +221,7 @@
                 modelId: structure.summary.model_identifier,
                 modelUrl: structure.summary.model_url,
                 modelFormat: structure.summary.model_format,
+                entities: structure.summary.entities || [],
               });
             }
           });
@@ -244,12 +249,40 @@
         return API_BASE_URL + path;
       }
 
-      async function loadStructure(url, name) {
+      async function loadStructure(url, name, modelFormat, entities) {
         const resolvedUrl = resolveModelUrl(url);
-        const comp = await nglStage.loadFile(resolvedUrl, { name });
-        comp.addRepresentation('cartoon', { sele: ':A', color: '#999999' });
-        comp.addRepresentation('cartoon', { sele: ':B', color: '#4169e1' });
-        comp.addRepresentation('cartoon', { sele: 'not :A and not :B', color: '#d0d0d0' });
+        const FORMAT_EXT = { PDB: 'pdb', BCIF: 'bcif' };
+        const ext = FORMAT_EXT[(modelFormat || '').toUpperCase()] || 'cif';
+        const comp = await nglStage.loadFile(resolvedUrl, { name, ext });
+
+        // Collect chain IDs from entities (Bindome uses multi-char names like "Apoly"/"Bpoly")
+        const chains = [];
+        if (Array.isArray(entities)) {
+          entities.forEach((entity) => {
+            if (Array.isArray(entity.chain_ids)) {
+              chains.push(...entity.chain_ids);
+            }
+          });
+        }
+
+        // Only use chain names that contain safe characters (alphanumeric and underscore only)
+        const safeChains = chains.filter((c) => typeof c === 'string' && /^[A-Za-z0-9_]+$/.test(c));
+
+        const chainA = safeChains[0] || null;
+        const chainB = safeChains[1] || null;
+        const COLORS = { chainA: '#999999', chainB: '#4169e1', other: '#d0d0d0' };
+
+        if (chainA && chainB) {
+          comp.addRepresentation('cartoon', { sele: ':' + chainA, color: COLORS.chainA });
+          comp.addRepresentation('cartoon', { sele: ':' + chainB, color: COLORS.chainB });
+          comp.addRepresentation('cartoon', { sele: 'not :' + chainA + ' and not :' + chainB, color: COLORS.other });
+        } else if (chainA) {
+          comp.addRepresentation('cartoon', { sele: ':' + chainA, color: COLORS.chainA });
+          comp.addRepresentation('cartoon', { sele: 'not :' + chainA, color: COLORS.other });
+        } else {
+          comp.addRepresentation('cartoon', { colorScheme: 'chainname' });
+        }
+
         return comp;
       }
 
@@ -273,7 +306,7 @@
 
         setViewerStatus('Loading ' + selectedModels.length + ' selected model(s)…');
         const results = await Promise.allSettled(
-          selectedModels.map((model) => loadStructure(model.modelUrl, model.modelId))
+          selectedModels.map((model) => loadStructure(model.modelUrl, model.modelId, model.modelFormat, model.entities))
         );
         const loaded = results.filter((result) => result.status === 'fulfilled').length;
 

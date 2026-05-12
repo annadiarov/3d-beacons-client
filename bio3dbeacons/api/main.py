@@ -28,7 +28,12 @@ app = FastAPI(version="2.0.0")
 
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=os.environ.get("CORS_ALLOWED_ORIGINS", "https://bindome.epfl.ch").split(","),
+    # Strip whitespace from each origin to handle "origin1, origin2" env var formats.
+    # Use "*" in CORS_ALLOWED_ORIGINS only for trusted development environments.
+    allow_origins=[
+        origin.strip()
+        for origin in os.environ.get("CORS_ALLOWED_ORIGINS", "https://bindome.epfl.ch").split(",")
+    ],
     allow_methods=["GET"],
     allow_headers=["Accept", "Content-Type"],
 )
