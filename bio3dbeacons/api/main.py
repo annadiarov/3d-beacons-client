@@ -2,6 +2,7 @@ import os
 from typing import Any, List
 
 from fastapi import FastAPI, HTTPException
+from fastapi.middleware.cors import CORSMiddleware
 from fastapi.params import Path, Query
 from starlette import status
 from starlette.responses import HTMLResponse, JSONResponse
@@ -24,6 +25,13 @@ FORMAT_EXTENSION_MAP = {
 }
 
 app = FastAPI(version="2.0.0")
+
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=["*"],
+    allow_methods=["GET"],
+    allow_headers=["*"],
+)
 
 
 @app.get(
