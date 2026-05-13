@@ -52,7 +52,9 @@ def run(index_path: str, mongo_db_url: str, batch_size: int):
 
         for path, _, files in os.walk(index_path):
             for file in filter(lambda x: x.endswith(".json"), files):
-                j: dict = json.load(open(f"{path}/{file}"))
+                stream = open(f"{path}/{file}", "r")
+                j: dict = json.load(stream)
+                stream.close()
                 lm.data.append(
                     UpdateOne({"_id": j.get("_id")}, {"$set": j}, upsert=True)
                 )
