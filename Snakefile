@@ -68,7 +68,7 @@ rule cleanup:
     params:
         staging_dir=STAGING_DIR,
     shell:
-        "rm -f {params.staging_dir}/*.indexed {params.staging_dir}/*.loaded && "
+        "rm -f {params.staging_dir}/*.indexed {params.staging_dir}/*.loaded {params.staging_dir}/manifest.txt && "
         "touch {output.marker}"
 
 
