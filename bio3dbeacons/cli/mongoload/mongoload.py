@@ -119,7 +119,7 @@ def load_files(mongo_db_url: str, batch_size: int, files_to_load: list[str]):
         with open(filepath, "r") as stream:
             json_data = json.load(stream)
             stream.close()
-        lm.data.append(UpdateOne({"_id": json_data.get("_id")}, {"$set": {"data": json_data}}, upsert=True))
+        lm.data.append(UpdateOne({"_id": json_data.get("_id")}, {"$set": json_data}, upsert=True))
         incr += 1
         if incr == batch_size:
             lm.load()
