@@ -84,3 +84,53 @@ def run(index_path: str, mongo_db_url: str, batch_size: int):
     lm.create_index()
 
     return 0
+
+
+def run_manifest(mongo_db_url: str, batch_size: int, manifest: str = None):
+    """Load json documents in MONGO
+
+    Args:
+        index_path (str): Path to the index json file, if a directory is passed,
+            process all .json files inside it
+        mongo_db_url (str): Mongo DB URL
+        batch_size (int): Number of documents to batch in a single commit
+        manifest (str): Path to manifest json file
+    """
+
+    if manifest:
+        # Read exact file list from manifest
+        with open(manifest, "r") as f:
+            # Load a manifest file.
+            LOG.info(f"Loading manifest json files.")
+            files_to_load = [line.strip() for line in f if line.strip()]
+
+    LOG.info(f"Loading {len(files_to_load)} files")
+    load_files(mongo_db_url, batch_size, files_to_load)
+
+    return 0
+
+
+def load_files(mongo_db_url: str, batch_size: int, files_to_load: list[str]):
+    lm = MongoLoad()
+    lm.init_collection(mongo_db_url)
+
+    total = incr = 0
+    for filepath in files_to_load:
+        with open(filepath, "r") as stream:
+            json_data = json.load(stream)
+            stream.close()
+        lm.data.append(UpdateOne({"_id": json_data.get("_id")}, {"$set": {"data": json_data}}, upsert=True))
+        incr += 1
+        if incr == batch_size:
+            lm.load()
+            lm.data.clear()
+            total += incr
+            incr = 0
+            LOG.info(f"Batch loaded: {total} documents so far")
+
+    if lm.data:
+        lm.load()
+        total += incr
+        LOG.info(f"Final batch loaded: {total} total documents")
+
+    lm.create_index()

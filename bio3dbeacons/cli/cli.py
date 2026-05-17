@@ -100,7 +100,13 @@ def pdb_to_cif(input_pdb: str, output_cif: str):  # pragma: no cover
     "--index-path",
     help="Path to index file, can be a directory as well. In case of directory, "
     "will index all json files in it.",
-    required=True,
+    required=False,
+)
+@click.option(
+    "-m",
+    "--manifest",
+    help="Path to a text file with one index JSON path per line (for batch use)",
+    required=False,
 )
 @click.option(
     "-h",
@@ -116,11 +122,16 @@ def pdb_to_cif(input_pdb: str, output_cif: str):  # pragma: no cover
     default=1000,
     type=int,
 )
-def load_mongo(mongo_db_url: str, index_path: str, batch_size: int):  # pragma: no cover
+def load_mongo(mongo_db_url: str, index_path: str, manifest: str, batch_size: int):  # pragma: no cover
     if not mongo_db_url:
         mongo_db_url = Config().MONGO_DB_URL
+    if not index_path and not manifest:
+        raise click.UsageError("Either --index-path or --manifest is required")
 
-    mongoload.run(index_path, mongo_db_url, batch_size)
+    if manifest:
+        mongoload.run_manifest(mongo_db_url, batch_size, manifest=manifest)
+    else:
+        mongoload.run(index_path, mongo_db_url, batch_size)
 
 
 @main.command("validate-index")

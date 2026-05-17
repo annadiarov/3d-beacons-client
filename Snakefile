@@ -33,21 +33,29 @@ rule all:
         f"{STAGING_DIR}/all.cleaned"
 
 
+rule build_manifest:
+    """Write the list of index JSON paths for the current batch to a manifest file."""
+    output:
+        f"{STAGING_DIR}/manifest.txt"
+    run:
+        with open(output[0], "w") as f:
+            for model_id in model_ids:
+                f.write(f"{hash_dir(model_id)}/index/{model_id}.index.json\n")
+
 rule bulk_load:
-    """Load ALL index JSONs into MongoDB in one single CLI call.
+    """Load only the current batch's index JSONs into MongoDB via a manifest file.
+    You can pass and index_path or a manifest file.
     Input: all .indexed marker files (guarantees all JSONs exist in hashed dirs).
-    The CLI walks DATA_ROOT and finds all *.index.json files automatically.
     """
     input:
-        expand("{staging}/{model}.indexed", staging=STAGING_DIR, model=model_ids)
+        manifest=f"{STAGING_DIR}/manifest.txt"
     output:
         marker=f"{STAGING_DIR}/all.loaded"
     params:
-        data_root=DATA_ROOT,
         cli=CLI,
         batch_size=1000,
     shell:
-        "{params.cli} load-index -i {params.data_root} -b {params.batch_size} && "
+        "{params.cli} load-index -m {input.manifest} -b {params.batch_size} && "
         "touch {output.marker}"
 
 
