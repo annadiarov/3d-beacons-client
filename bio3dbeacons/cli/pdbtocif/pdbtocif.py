@@ -90,11 +90,16 @@ class Pdb2Cif:
             with open(self.output_cif_path, "w", encoding="utf-8") as cif_file:
                 cif_file.write(doc.as_string())
 
-            LOG.info(
-                "Converted (python gemmi) %s to %s",
-                self.pdb_path,
-                self.output_cif_path,
-            )
+            # after writing, verify the output is a valid CIF with at least one block
+            try:
+                doc = gemmi.cif.read(self.output_cif_path)
+                if len(doc) == 0:
+                    LOG.error("Converted CIF has no data blocks: %s", self.output_cif_path)
+                    return 1 # non-zero → pdb2cif rule fails → Snakemake retries pdb2cif
+
+            except Exception as e:
+                LOG.error("Converted CIF is invalid: %s", e)
+                return 1
 
             return 0
 
