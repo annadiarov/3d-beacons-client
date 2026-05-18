@@ -47,6 +47,7 @@ class Cif2Json:
         except Exception as e:
             LOG.error("Error in parsing the cif file! %s", e)
             LOG.debug(e)
+            raise  # Propagate error so cif2index exits non-zero (not return 0) immediately
 
     def read_json(self):
         """Reads the json file and populates them in entry"""
