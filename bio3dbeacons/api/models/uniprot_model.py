@@ -261,6 +261,68 @@ class SummaryItems(BaseModel):
         ..., description="A list of molecular entities in the model"
     )
 
+class AFAverageConfidenceMetrics(BaseModel):
+    model_identifier: str = Field(
+        ..., description="Identifier of the model, such as PDB id", example="8kfa"
+    )
+    model_url: str = Field(
+        ...,
+        description="URL of the model coordinates",
+        example="https://www.ebi.ac.uk/pdbe/static/entry/1t29_updated.cif",
+    )
+    provider: str = Field(
+        ..., description="Name of the model provider", example="SWISS-MODEL"
+    )
+    uniprot_start: int = Field(
+        ...,
+        description="1-indexed first residue of the model according to UniProt sequence numbering\n",
+        example=1,
+    )
+    uniprot_end: int = Field(
+        ...,
+        description="1-indexed last residue of the model according to UniProt sequence numbering\n",
+        example=142,
+    )
+    coverage: float = Field(
+        ...,
+        description="Fraction in range of [0, 1] of the UniProt sequence covered by the model.  This is calculated as (uniprot_end - uniprot_start + 1) / uniprot_sequence_length\n",
+        example=0.4,
+    )
+    average_plDDT: float = Field(
+        ...,
+        description="Description",
+        example=0.5,
+    )
+    average_pTM: float = Field(
+        ...,
+        description="Description",
+        example=0.5,
+    )
+    average_i_pTM: float = Field(
+        ...,
+        description="Description",
+        example=0.5,
+    )
+    average_pAE: float = Field(
+        ...,
+        description="Description",
+        example=0.5,
+    )
+    average_i_pAE: float = Field(
+        ...,
+        description="Description",
+        example=0.5,
+    )
+    average_ipSAE: float = Field(
+        ...,
+        description="Description",
+        example=0.5,
+    )
+    average_i_pLDDT: float = Field(
+        ...,
+        description="Description",
+        example=0.5,
+    )
 
 class ExperimentalMethod1(Enum):
     ELECTRON_CRYSTALLOGRAPHY = "ELECTRON CRYSTALLOGRAPHY"
@@ -518,3 +580,7 @@ class UniprotDetails(BaseModel):
 class PdbSummary(BaseModel):
     uniprot_entry: Optional[PdbEntry] = None
     structures: Optional[List[Overview]] = None
+
+class UniprotAverageMetrics(BaseModel):
+    uniprot_entry: Optional[UniprotEntry] = None
+    metrics: Optional[List[AFAverageConfidenceMetrics]] = None

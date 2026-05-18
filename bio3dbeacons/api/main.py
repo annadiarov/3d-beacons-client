@@ -14,6 +14,8 @@ from bio3dbeacons.api.models.uniprot_model import (
     SummaryItems,
     Entity,
     Overview,
+    AFAverageConfidenceMetrics,
+    UniprotAverageMetrics
 )
 from bio3dbeacons.api.utils import get_model_asset_url
 
@@ -25,6 +27,17 @@ FORMAT_EXTENSION_MAP = {
 
 app = FastAPI(version="2.0.0")
 
+# @app.exception_handler(StarletteHTTPException)
+# async def http_exception_handler(request, exc):
+#     return JSONResponse({'message':str(exc.detail)}, status_code=exc.status_code)
+#
+#
+# @app.exception_handler(RequestValidationError)
+# async def validation_exception_handler(request, exc: RequestValidationError):
+#     message = "Validation errors:"
+#     for error in exc.errors():
+#         message += f"\nField: {error['loc']}, Error: {error['msg']}"
+#     return JSONResponse({'message': message}, status_code=400)
 
 @app.get(
     "/uniprot/summary/{qualifier}.json",
@@ -133,6 +146,80 @@ async def get_uniprot_summary_api(
         structures=overview_items,
     )
 
+@app.get(
+    "/uniprot/{qualifier}/metrics",
+    status_code=status.HTTP_200_OK,
+    summary="Get metrics for a UniProt residue range",
+    description="Get all models for the UniProt metrics.",
+    response_model=UniprotAverageMetrics,
+    response_model_exclude_unset=True,
+)
+async def get_uniprot_metrics_api(
+    qualifier: Any = Path(..., description=UNIPROT_QUAL_DESC),
+):
+    f"""Returns metrics details for a UniProt accession
+
+    Args:
+        qualifier (Any): {UNIPROT_QUAL_DESC}
+    Raises:
+        HTTPException: Raised when there are validation issues with parameters
+
+    Returns:
+        Model: A Model object
+    """
+
+    qualifier = qualifier.upper()
+    models_db = SingletonMongoDB.get_models_db()
+    model_collection = models_db.modelCollection
+    results = model_collection.find(
+        {
+            "$or": [
+                {"mappingAccession": {"$eq": qualifier}},
+                {"mappingId": {"$eq": qualifier}},
+            ],
+            "$and": [
+                {"mappingAccessionType": {"$eq": "uniprot"}},
+            ],
+        }
+    )
+
+    metrics: List[AFAverageConfidenceMetrics] = []
+    uniprot_entry = None
+
+    async for row in results:
+        uniprot_entry = UniprotEntry(
+            ac=row["mappingAccession"],
+            id=row["mappingId"],
+        )
+        metrics.append(
+            AFAverageConfidenceMetrics(
+                model_identifier=row["entryId"],
+                model_url=get_model_asset_url(
+                    ASSETS_URL,
+                    row["entryId"],
+                    FORMAT_EXTENSION_MAP.get(os.environ.get("MODEL_FORMAT", "MMCIF"), "cif")
+                ),
+                provider=os.environ.get("PROVIDER"),
+                uniprot_start=row["start"],
+                uniprot_end=row["end"],
+                coverage=row["coverage"],
+                average_plDDT=row["Average_pLDDT"],
+                average_pTM=row["Average_pTM"],
+                average_i_pTM=row["Average_i_pTM"],
+                average_pAE=row["Average_pAE"],
+                average_i_pAE=row["Average_i_pAE"],
+                average_ipSAE=row["Average_ipSAE"],
+                average_i_pLDDT=row["Average_i_pLDDT"],
+            )
+        )
+
+    if not metrics:
+        return JSONResponse(content={}, status_code=status.HTTP_404_NOT_FOUND)
+
+    return UniprotAverageMetrics(
+        uniprot_entry=uniprot_entry,
+        metrics=metrics
+    )
 
 @app.get("/health-check", include_in_schema=False)
 def health_check():
