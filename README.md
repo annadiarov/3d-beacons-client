@@ -139,32 +139,32 @@ curl -X 'GET' \
         {
             "model_identifier": P38398_123,
             "model_url": "static/.../P38398_123.cif",
-            "provider": "AFDB",
+            "provider": "Bindome",
             "uniprot_start": 1,
             "uniprot_end": 24,
             "coverage": 0.67,
-            "average_pLDDT": 0.6,
-            "average_pTM": 0.7,
-            "average_i_pTM": 0.67,
-            "average_pAE": 0.8,
-            "average_i_pAE": 0.87,
-            "average_ipSAE": 0.9
-            "average_i_pLDDT": 0.97
+            "average_pLDDT": 0.84,
+            "average_pTM": 0.85,
+            "average_i_pTM": 0.76,
+            "average_pAE": 0.21,
+            "average_i_pAE": 0.25,
+            "average_ipSAE": 0.79
+            "average_i_pLDDT": 0.59
         },
         {
             "model_identifier": P38398_456,
             "model_url": "static/.../P38398_456.cif",
-            "provider": "AFDB",
-            "uniprot_start": 1,
-            "uniprot_end": 34,
-            "coverage": 0.77,
-            "average_pLDDT": 0.8,
-            "average_pTM": 0.6,
-            "average_i_pTM": 0.73,
-            "average_pAE": 0.82,
-            "average_i_pAE": 0.85,
-            "average_ipSAE": 0.92
-            "average_i_pLDDT": 0.93
+            "provider": "Bindome",
+            "uniprot_start": 188,
+            "uniprot_end": 345,
+            "coverage": 0.43,
+            "average_pLDDT": 0.90,
+            "average_pTM": 0.84,
+            "average_i_pTM": 0.75,
+            "average_pAE": 0.18,
+            "average_i_pAE": 0.22,
+            "average_ipSAE": 0.83
+            "average_i_pLDDT": 0.61
         }
     ]
 }
