@@ -121,6 +121,55 @@ If you want to perform a dry-run first use:
 python bio3dbeacons/cli/cli.py delete-by-ids --dry-run ID_1 ID_2
 ```
 
+#### Get related metrics from a model via API
+
+We can now search for the related metrics of a model via the API:
+
+```
+curl -X 'GET' \
+  'http://localhost/uniprot/P38398/metrics' \
+  -H 'accept: application/json'
+
+{
+    "uniprot_entry": {
+       "ac": "P38398",
+       "id": "BRCA1_HUMAN"
+     },
+    "metrics": [
+        {
+            "model_identifier": P38398_123,
+            "model_url": "static/.../P38398_123.cif",
+            "provider": "AFDB",
+            "uniprot_start": 1,
+            "uniprot_end": 24,
+            "coverage": 0.67,
+            "average_pLDDT": 0.6,
+            "average_pTM": 0.7,
+            "average_i_pTM": 0.67,
+            "average_pAE": 0.8,
+            "average_i_pAE": 0.87,
+            "average_ipSAE": 0.9
+            "average_i_pLDDT": 0.97
+        },
+        {
+            "model_identifier": P38398_456,
+            "model_url": "static/.../P38398_456.cif",
+            "provider": "AFDB",
+            "uniprot_start": 1,
+            "uniprot_end": 34,
+            "coverage": 0.77,
+            "average_pLDDT": 0.8,
+            "average_pTM": 0.6,
+            "average_i_pTM": 0.73,
+            "average_pAE": 0.82,
+            "average_i_pAE": 0.85,
+            "average_ipSAE": 0.92
+            "average_i_pLDDT": 0.93
+        }
+    ]
+}
+```
+
 #### Find the model via API
 
 We can now search for this model via the API:
