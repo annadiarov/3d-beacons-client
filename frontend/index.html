@@ -185,6 +185,16 @@
           </div>
         </div>
 
+        <div id="column-controls-card" class="card bindome-card mb-3 d-none">
+          <div class="card-body">
+            <div class="d-flex justify-content-between align-items-center flex-wrap gap-2 mb-2">
+              <h2 class="h6 mb-0">Table columns</h2>
+              <small class="text-muted">Choose which metric columns to display across all result tables.</small>
+            </div>
+            <div id="column-controls" class="metric-column-controls"></div>
+          </div>
+        </div>
+
         <div id="results-container" class="accordion mb-3" aria-live="polite"></div>
 
         <div id="download-card" class="card bindome-card mb-3 d-none">
@@ -213,9 +223,8 @@
             <div class="card-body">
               <div id="molstar-viewer" role="img" aria-label="Molstar protein structure viewer"></div>
               <div class="mt-2 small text-muted">
-                <span class="swatch" style="background:#999999"></span>Chain A
+                <span class="swatch" style="background:#b8b8b8"></span>Chain A
                 <span class="ms-3 swatch" style="background:#4169e1"></span>Chain B
-                <span class="ms-3 swatch" style="background:#d0d0d0"></span>Other chains
               </div>
               <small id="viewer-status" class="text-muted d-block mt-2" aria-live="polite"></small>
             </div>
