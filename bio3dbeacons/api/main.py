@@ -203,7 +203,7 @@ async def get_uniprot_metrics_api(
                 uniprot_start=row["start"],
                 uniprot_end=row["end"],
                 coverage=row["coverage"],
-                average_plDDT=row["Average_pLDDT"],
+                average_pLDDT=row["Average_pLDDT"],
                 average_pTM=row["Average_pTM"],
                 average_i_pTM=row["Average_i_pTM"],
                 average_pAE=row["Average_pAE"],

@@ -288,7 +288,7 @@ class AFAverageConfidenceMetrics(BaseModel):
         description="Fraction in range of [0, 1] of the UniProt sequence covered by the model.  This is calculated as (uniprot_end - uniprot_start + 1) / uniprot_sequence_length\n",
         example=0.4,
     )
-    average_plDDT: float = Field(
+    average_pLDDT: float = Field(
         ...,
         description="Description",
         example=0.5,
